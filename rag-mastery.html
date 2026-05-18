@@ -1,0 +1,1815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RAG Mastery — The Practitioner's Deep Dive</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0c0c0f;
+  --surface: #141419;
+  --surface2: #1c1c24;
+  --surface3: #24242f;
+  --border: #2a2a38;
+  --text: #e4e4ec;
+  --text-dim: #8888a0;
+  --text-muted: #5c5c74;
+  --accent: #6ee7b7;
+  --accent2: #34d399;
+  --accent-dim: rgba(110,231,183,0.08);
+  --accent-glow: rgba(110,231,183,0.15);
+  --warning: #fbbf24;
+  --danger: #f87171;
+  --info: #60a5fa;
+  --purple: #a78bfa;
+  --pink: #f472b6;
+  --orange: #fb923c;
+  --teal: #2dd4bf;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Source Sans 3', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+  font-size: 16px;
+  overflow-x: hidden;
+}
+
+::selection { background: var(--accent); color: var(--bg); }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ── NAVIGATION ── */
+.nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(12,12,15,0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem;
+  display: flex; align-items: center; height: 56px;
+}
+.nav-logo {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.15rem; color: var(--accent);
+  letter-spacing: -0.02em;
+  flex-shrink: 0;
+}
+.nav-logo span { color: var(--text-dim); font-style: italic; }
+.nav-links {
+  display: flex; gap: 0; margin-left: 2rem;
+  overflow-x: auto; flex: 1;
+  -ms-overflow-style: none; scrollbar-width: none;
+}
+.nav-links::-webkit-scrollbar { display: none; }
+.nav-link {
+  padding: 0 1rem; height: 56px; display: flex; align-items: center;
+  font-size: 0.82rem; font-weight: 500; color: var(--text-dim);
+  text-decoration: none; white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+.nav-link:hover, .nav-link.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+.progress-bar {
+  position: fixed; top: 56px; left: 0; height: 2px; z-index: 101;
+  background: linear-gradient(90deg, var(--accent), var(--teal));
+  transition: width 0.15s;
+}
+
+/* ── LAYOUT ── */
+.container { max-width: 900px; margin: 0 auto; padding: 0 2rem; }
+
+section {
+  padding: 5rem 0 3rem;
+  min-height: 60vh;
+  border-bottom: 1px solid var(--border);
+  opacity: 0; transform: translateY(30px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+section.visible { opacity: 1; transform: translateY(0); }
+
+/* ── HERO ── */
+.hero {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  text-align: center; padding-top: 56px;
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 40%, rgba(110,231,183,0.06) 0%, transparent 70%),
+    var(--bg);
+}
+.hero h1 {
+  font-family: 'DM Serif Display', serif;
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  line-height: 1.1; color: var(--text);
+  margin-bottom: 1.5rem;
+}
+.hero h1 em { color: var(--accent); font-style: italic; }
+.hero-sub {
+  font-size: 1.15rem; color: var(--text-dim); max-width: 560px;
+  margin: 0 auto 2.5rem; font-weight: 300;
+}
+.hero-stats {
+  display: flex; gap: 2rem; justify-content: center; flex-wrap: wrap;
+}
+.hero-stat {
+  text-align: center;
+}
+.hero-stat-num {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 1.8rem; font-weight: 600; color: var(--accent);
+}
+.hero-stat-label { font-size: 0.78rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; }
+
+/* ── TYPOGRAPHY ── */
+h2 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 2.2rem; margin-bottom: 0.5rem;
+  line-height: 1.2;
+}
+h2 .section-num {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.85rem; color: var(--accent);
+  display: block; margin-bottom: 0.5rem;
+  letter-spacing: 0.15em;
+}
+h3 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.5rem; margin: 2.5rem 0 1rem;
+  color: var(--text);
+}
+h4 {
+  font-family: 'Source Sans 3', sans-serif;
+  font-size: 1.05rem; font-weight: 600;
+  color: var(--accent); margin: 1.5rem 0 0.5rem;
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+p { margin-bottom: 1rem; color: var(--text-dim); }
+p.lead { font-size: 1.1rem; color: var(--text); font-weight: 300; margin-bottom: 2rem; }
+
+strong { color: var(--text); font-weight: 600; }
+
+/* ── CARDS & BOXES ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  transition: border-color 0.3s, transform 0.2s;
+}
+.card:hover { border-color: var(--accent); transform: translateY(-2px); }
+
+.card-header {
+  display: flex; align-items: center; gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.card-icon {
+  width: 40px; height: 40px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem; flex-shrink: 0;
+}
+.card-title {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.2rem;
+}
+
+.tip-box {
+  background: var(--accent-dim);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  padding: 1rem 1.25rem;
+  margin: 1.5rem 0;
+}
+.tip-box .tip-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem; font-weight: 600;
+  color: var(--accent); text-transform: uppercase;
+  letter-spacing: 0.12em; margin-bottom: 0.4rem;
+}
+.tip-box p { color: var(--text); margin: 0; font-size: 0.95rem; }
+
+.warning-box {
+  background: rgba(251,191,36,0.06);
+  border-left: 3px solid var(--warning);
+  border-radius: 0 8px 8px 0;
+  padding: 1rem 1.25rem;
+  margin: 1.5rem 0;
+}
+.warning-box .tip-label { color: var(--warning); }
+.warning-box p { color: var(--text); margin: 0; font-size: 0.95rem; }
+
+.danger-box {
+  background: rgba(248,113,113,0.06);
+  border-left: 3px solid var(--danger);
+  border-radius: 0 8px 8px 0;
+  padding: 1rem 1.25rem; margin: 1.5rem 0;
+}
+.danger-box .tip-label { color: var(--danger); }
+.danger-box p { color: var(--text); margin: 0; font-size: 0.95rem; }
+
+/* ── CODE ── */
+pre {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.25rem;
+  overflow-x: auto;
+  margin: 1rem 0 1.5rem;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.82rem;
+  line-height: 1.65;
+  color: var(--text-dim);
+}
+code {
+  font-family: 'IBM Plex Mono', monospace;
+  background: var(--surface2);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  font-size: 0.88em;
+  color: var(--accent);
+}
+pre code { background: none; padding: 0; color: inherit; }
+.kw { color: var(--purple); }
+.fn { color: var(--info); }
+.str { color: var(--accent); }
+.cm { color: var(--text-muted); font-style: italic; }
+.num { color: var(--orange); }
+
+/* ── TABS ── */
+.tabs {
+  display: flex; gap: 0; border-bottom: 1px solid var(--border);
+  margin-bottom: 1.5rem; overflow-x: auto;
+}
+.tab {
+  padding: 0.75rem 1.25rem;
+  font-size: 0.85rem; font-weight: 500;
+  color: var(--text-dim);
+  cursor: pointer; white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  background: none; border-top: 0; border-left: 0; border-right: 0;
+  font-family: inherit;
+}
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-content { display: none; }
+.tab-content.active { display: block; animation: fadeUp 0.35s ease; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── ACCORDION ── */
+.accordion { margin: 1rem 0; }
+.accordion-item {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  overflow: hidden;
+}
+.accordion-btn {
+  width: 100%; text-align: left; padding: 1rem 1.25rem;
+  background: var(--surface);
+  border: none; color: var(--text); cursor: pointer;
+  font-family: 'Source Sans 3', sans-serif;
+  font-size: 0.95rem; font-weight: 600;
+  display: flex; align-items: center; justify-content: space-between;
+  transition: background 0.2s;
+}
+.accordion-btn:hover { background: var(--surface2); }
+.accordion-btn .arrow {
+  transition: transform 0.3s;
+  color: var(--accent); font-size: 0.8rem;
+}
+.accordion-item.open .accordion-btn .arrow { transform: rotate(180deg); }
+.accordion-body {
+  max-height: 0; overflow: hidden;
+  transition: max-height 0.4s ease;
+  background: var(--surface);
+}
+.accordion-body-inner { padding: 0 1.25rem 1.25rem; }
+
+/* ── PIPELINE DIAGRAM ── */
+.pipeline {
+  display: flex; align-items: center; gap: 0;
+  overflow-x: auto; padding: 1.5rem 0;
+  margin: 1rem 0;
+}
+.pipeline-step {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  text-align: center;
+  min-width: 110px;
+  flex-shrink: 0;
+  transition: all 0.3s;
+  cursor: default;
+}
+.pipeline-step:hover {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+  transform: scale(1.05);
+}
+.pipeline-step .step-icon { font-size: 1.3rem; margin-bottom: 0.3rem; }
+.pipeline-step .step-label { font-size: 0.72rem; font-weight: 600; color: var(--text); }
+.pipeline-step .step-sub { font-size: 0.65rem; color: var(--text-muted); }
+.pipeline-arrow {
+  color: var(--text-muted); font-size: 1.2rem; padding: 0 0.25rem;
+  flex-shrink: 0;
+}
+
+/* ── COMPARISON TABLE ── */
+.comparison-table {
+  width: 100%; border-collapse: collapse;
+  margin: 1.5rem 0; font-size: 0.88rem;
+}
+.comparison-table th {
+  background: var(--surface2);
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: var(--accent);
+  border-bottom: 2px solid var(--accent);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.comparison-table td {
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-dim);
+  vertical-align: top;
+}
+.comparison-table tr:hover td { background: var(--accent-dim); }
+
+/* ── INTERACTIVE QUIZ ── */
+.quiz { margin: 2rem 0; }
+.quiz-q {
+  font-weight: 600; color: var(--text);
+  margin-bottom: 0.75rem; font-size: 1rem;
+}
+.quiz-options { display: flex; flex-direction: column; gap: 0.5rem; }
+.quiz-opt {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  font-family: inherit; font-size: 0.9rem;
+  color: var(--text-dim);
+  transition: all 0.2s;
+  text-align: left;
+}
+.quiz-opt:hover { border-color: var(--accent); color: var(--text); }
+.quiz-opt.correct {
+  border-color: var(--accent); background: var(--accent-dim);
+  color: var(--accent);
+}
+.quiz-opt.wrong {
+  border-color: var(--danger); background: rgba(248,113,113,0.06);
+  color: var(--danger);
+}
+.quiz-explain {
+  margin-top: 0.75rem; padding: 0.75rem 1rem;
+  background: var(--surface2); border-radius: 8px;
+  font-size: 0.88rem; color: var(--text-dim);
+  display: none;
+}
+.quiz-explain.show { display: block; animation: fadeUp 0.3s ease; }
+
+/* ── CHECKLIST ── */
+.checklist { margin: 1rem 0; }
+.checklist-item {
+  display: flex; align-items: flex-start; gap: 0.75rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid rgba(42,42,56,0.5);
+}
+.checklist-box {
+  width: 20px; height: 20px; border-radius: 5px;
+  border: 2px solid var(--border);
+  cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s; margin-top: 2px;
+  background: none; color: transparent; font-size: 0.7rem;
+}
+.checklist-box.checked {
+  background: var(--accent); border-color: var(--accent);
+  color: var(--bg);
+}
+.checklist-text { font-size: 0.92rem; color: var(--text-dim); }
+.checklist-text strong { color: var(--text); }
+
+/* ── TAG ── */
+.tag {
+  display: inline-block;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.68rem; font-weight: 500;
+  padding: 0.2em 0.6em;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.tag-green { background: rgba(110,231,183,0.12); color: var(--accent); }
+.tag-blue { background: rgba(96,165,250,0.12); color: var(--info); }
+.tag-purple { background: rgba(167,139,250,0.12); color: var(--purple); }
+.tag-orange { background: rgba(251,146,60,0.12); color: var(--orange); }
+.tag-pink { background: rgba(244,114,182,0.12); color: var(--pink); }
+
+/* ── GRID ── */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+@media (max-width: 700px) {
+  .grid-2 { grid-template-columns: 1fr; }
+  .hero h1 { font-size: 2.2rem; }
+  .nav-links { display: none; }
+  .pipeline { flex-wrap: wrap; justify-content: center; }
+}
+
+/* ── DECISION TREE ── */
+.decision-tree { margin: 1.5rem 0; }
+.dt-node {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 0.75rem;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+.dt-node:hover { border-color: var(--accent); }
+.dt-node.active { border-color: var(--accent); background: var(--accent-dim); }
+.dt-question { font-weight: 600; color: var(--text); margin-bottom: 0.5rem; }
+.dt-options { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.dt-opt {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+  color: var(--text-dim);
+  transition: all 0.2s;
+  font-family: inherit;
+}
+.dt-opt:hover, .dt-opt.selected { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+.dt-result {
+  background: var(--accent-dim);
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-top: 1rem;
+  display: none;
+}
+.dt-result.show { display: block; animation: fadeUp 0.3s ease; }
+.dt-result h4 { color: var(--accent); margin-top: 0; }
+
+/* ── FOOTER ── */
+footer {
+  padding: 3rem 2rem;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  border-top: 1px solid var(--border);
+}
+footer a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-logo">RAG <span>Mastery</span></div>
+  <div class="nav-links">
+    <a class="nav-link" data-target="types">Types</a>
+    <a class="nav-link" data-target="pipeline">Pipeline</a>
+    <a class="nav-link" data-target="chunking">Chunking</a>
+    <a class="nav-link" data-target="retrieval">Retrieval</a>
+    <a class="nav-link" data-target="generation">Generation</a>
+    <a class="nav-link" data-target="advanced">Advanced</a>
+    <a class="nav-link" data-target="eval">Evaluation</a>
+    <a class="nav-link" data-target="production">Production</a>
+    <a class="nav-link" data-target="realworld">Real-World</a>
+    <a class="nav-link" data-target="decision">Decision</a>
+  </div>
+</nav>
+<div class="progress-bar" id="progressBar"></div>
+
+<!-- HERO -->
+<section class="hero visible" style="border: none;">
+  <div>
+    <h1>The Practitioner's Guide to<br><em>RAG Architecture</em></h1>
+    <p class="hero-sub">Every type, technique, and hard-won trick — from naive pipelines to agentic orchestration. Interactive, practical, zero fluff.</p>
+    <div class="hero-stats">
+      <div class="hero-stat"><div class="hero-stat-num">10</div><div class="hero-stat-label">Sections</div></div>
+      <div class="hero-stat"><div class="hero-stat-num">20+</div><div class="hero-stat-label">Techniques</div></div>
+      <div class="hero-stat"><div class="hero-stat-num">40+</div><div class="hero-stat-label">Pro Tips</div></div>
+    </div>
+  </div>
+</section>
+
+<div class="container">
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SECTION 1: RAG TYPES -->
+<!-- ═══════════════════════════════════════════ -->
+<section id="types">
+  <h2><span class="section-num">01 — RAG ARCHITECTURES</span>The Nine Types You Must Know</h2>
+  <p class="lead">Each RAG variant solves a specific weakness. The trick isn't choosing the most advanced one — it's choosing the right one for your use case.</p>
+
+  <div class="tabs" id="typeTabs">
+    <button class="tab active" data-tab="naive">Naive</button>
+    <button class="tab" data-tab="advanced">Advanced</button>
+    <button class="tab" data-tab="modular">Modular</button>
+    <button class="tab" data-tab="self">Self-RAG</button>
+    <button class="tab" data-tab="corrective">Corrective</button>
+    <button class="tab" data-tab="graph">Graph</button>
+    <button class="tab" data-tab="agentic">Agentic</button>
+    <button class="tab" data-tab="hybrid">Hybrid</button>
+    <button class="tab" data-tab="multimodal">Multimodal</button>
+  </div>
+
+  <div class="tab-content active" data-tab="naive">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon" style="background:rgba(110,231,183,0.1);color:var(--accent)">📄</div>
+        <div><div class="card-title">Naive RAG</div><span class="tag tag-green">Baseline</span></div>
+      </div>
+      <p>The simplest form: chunk → embed → store → retrieve → generate. No reranking, no query rewriting, no validation. Your documents go into a vector DB, queries get embedded, top-k similar chunks come back, and the LLM generates from them.</p>
+      <p><strong>Where it works:</strong> Small, clean datasets. Internal FAQs. Simple document Q&A where the corpus is tightly scoped and high quality.</p>
+      <div class="danger-box">
+        <div class="tip-label">⚠ Known Failures</div>
+        <p>High noise risk — irrelevant chunks confuse the LLM. No self-correction; if retrieval fails, you get confident hallucination. Struggles with multi-part questions or ambiguous queries.</p>
+      </div>
+      <div class="tip-box">
+        <div class="tip-label">💡 Practitioner Tip</div>
+        <p>Naive RAG is your starting baseline, never your destination. Build it first, measure it, then layer improvements. You can't optimize what you haven't benchmarked.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-content" data-tab="advanced">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon" style="background:rgba(96,165,250,0.1);color:var(--info)">🔬</div>
+        <div><div class="card-title">Advanced RAG</div><span class="tag tag-blue">Production-Ready</span></div>
+      </div>
+      <p>Adds pre-retrieval and post-retrieval intelligence to the naive pipeline. Think query rewriting, hybrid search, reranking, and context compression layered before and after the core retrieval step.</p>
+      <p><strong>Key additions:</strong> Query routing or transformation happens before retrieval. Reranking with cross-encoders happens after retrieval. Context is compressed to remove noise before generation.</p>
+      <div class="pipeline">
+        <div class="pipeline-step"><div class="step-icon">💬</div><div class="step-label">Query</div></div>
+        <div class="pipeline-arrow">→</div>
+        <div class="pipeline-step" style="border-color:var(--info)"><div class="step-icon">🔄</div><div class="step-label">Transform</div><div class="step-sub">rewrite / expand</div></div>
+        <div class="pipeline-arrow">→</div>
+        <div class="pipeline-step"><div class="step-icon">🔍</div><div class="step-label">Retrieve</div><div class="step-sub">hybrid search</div></div>
+        <div class="pipeline-arrow">→</div>
+        <div class="pipeline-step" style="border-color:var(--purple)"><div class="step-icon">📊</div><div class="step-label">Rerank</div><div class="step-sub">cross-encoder</div></div>
+        <div class="pipeline-arrow">→</div>
+        <div class="pipeline-step" style="border-color:var(--accent)"><div class="step-icon">✨</div><div class="step-label">Generate</div></div>
+      </div>
+      <div class="tip-box">
+        <div class="tip-label">💡 Practitioner Tip</div>
+        <p>Most production systems should be at this level at minimum. The combination of hybrid retrieval + reranking alone can yield 30%+ relevance improvements per Pinecone benchmarks.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-content" data-tab="modular">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon" style="background:rgba(167,139,250,0.1);color:var(--purple)">🧩</div>
+        <div><div class="card-title">Modular RAG</div><span class="tag tag-purple">Composable</span></div>
+      </div>
+      <p>Breaks the RAG pipeline into swappable, composable modules. Each component — chunker, retriever, reranker, generator — can be independently upgraded, tested, and configured per use case.</p>
+      <p><strong>Why it matters:</strong> Real-world systems need different strategies for different document types. Legal docs need different chunking than code. Product manuals need different retrieval than research papers. Modular RAG lets you mix and match.</p>
+      <div class="tip-box">
+        <div class="tip-label">💡 Practitioner Tip</div>
+        <p>Design your RAG system with clean interfaces between modules from day one. Even if you start naive, having pluggable retriever/reranker/generator interfaces means you can upgrade incrementally without rewriting the whole pipeline.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-content" data-tab="self">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon" style="background:rgba(244,114,182,0.1);color:var(--pink)">🪞</div>
+        <div><div class="card-title">Self-RAG</div><span class="tag tag-pink">Self-Reflective</span></div>
+      </div>
+      <p>The model self-critiques its own generation. After producing an answer from retrieved documents, it evaluates whether the answer is actually supported by the source material and adjusts if discrepancies are found.</p>
+      <p><strong>How it works:</strong> The LLM generates special "reflection tokens" at each step. It decides: (1) Do I even need retrieval for this? (2) Is the retrieved content relevant? (3) Does my answer actually follow from the evidence? (4) Is the answer useful?</p>
+      <pre><code><span class="cm">// Self-RAG pseudocode flow</span>
+<span class="kw">function</span> <span class="fn">selfRAG</span>(query) {
+  <span class="kw">if</span> (<span class="fn">needsRetrieval</span>(query)) {
+    docs = <span class="fn">retrieve</span>(query)
+    answer = <span class="fn">generate</span>(query, docs)
+    <span class="kw">if</span> (!<span class="fn">isSupported</span>(answer, docs)) {
+      <span class="kw">return</span> <span class="fn">regenerate</span>(query, docs) <span class="cm">// retry with critique</span>
+    }
+  } <span class="kw">else</span> {
+    answer = <span class="fn">generate</span>(query) <span class="cm">// answer from parametric knowledge</span>
+  }
+  <span class="kw">return</span> answer
+}</code></pre>
+      <div class="warning-box">
+        <div class="tip-label">⚠ Trade-off</div>
+        <p>Self-RAG adds latency — every answer gets a self-critique pass. It's best when accuracy is more important than speed, such as in medical, legal, or financial applications.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-content" data-tab="corrective">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon" style="background:rgba(251,191,36,0.1);color:var(--warning)">🔧</div>
+        <div><div class="card-title">Corrective RAG (CRAG)</div><span class="tag tag-orange">Validation Layer</span></div>
+      </div>
+      <p>Adds a critical validation layer after retrieval. A lightweight evaluator scores documents as "Correct," "Incorrect," or "Ambiguous." If retrieval quality is poor, CRAG triggers corrective actions — query transformation, web search fallback, or knowledge strip decomposition.</p>
+      <p><strong>Key differentiator from Self-RAG:</strong> CRAG uses a separate, often smaller model as the evaluator, making it more modular. You can evolve the checker independently from the generator.</p>
+      <pre><code><span class="cm"># CRAG flow</span>
+Query → Retrieve → <span class="fn">Grade Documents</span>
+  ├─ <span class="str">Relevant?</span> → Yes → Generate Answer
+  └─ <span class="str">Not sure / No?</span>
+       ├─ <span class="fn">Transform Query</span> → Re-retrieve
+       └─ <span class="fn">Web Search Fallback</span> → Generate</code></pre>
+      <div class="tip-box">
+        <div class="tip-label">💡 Practitioner Tip</div>
+        <p>CRAG is ideal for compliance-critical systems. Use a fine-tuned T5 or similar small model as the grader — it's fast and cheap. The key insight: decomposing documents into "knowledge strips" and grading each strip individually catches partial relevance that chunk-level grading misses.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-content" data-tab="graph">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon" style="background:rgba(45,212,191,0.1);color:var(--teal)">🕸️</div>
+        <div><div class="card-title">Graph RAG</div><span class="tag tag-green">Relationship-Aware</span></div>
+      </div>
+      <p>Uses a knowledge graph to understand how entities and concepts are connected. Instead of just matching text similarity, Graph RAG traverses relationships — finding relevant information even when there's no lexical or semantic overlap with the query.</p>
+      <p><strong>Power domains:</strong> Pharma (drug interactions), finance (regulatory dependencies), investigative journalism (hidden connections), HR (org structures), cybersecurity (attack chains).</p>
+      <div class="tip-box">
+        <div class="tip-label">💡 Practitioner Tip</div>
+        <p>Graph RAG shines when your queries are about <em>relationships</em>, not just facts. "Which employees report to managers who approved the Q3 budget?" requires understanding org structure — vectors alone won't solve this. Pair it with Neo4j or similar for the graph layer.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-content" data-tab="agentic">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon" style="background:rgba(251,146,60,0.1);color:var(--orange)">🤖</div>
+        <div><div class="card-title">Agentic RAG</div><span class="tag tag-orange">Autonomous</span></div>
+      </div>
+      <p>Instead of a fixed pipeline, an LLM-powered agent decides <em>what</em> to retrieve, <em>when</em> to retrieve, and <em>whether</em> the retrieval was sufficient. It can plan multi-step research, use tools, backtrack, and refine its approach.</p>
+      <p><strong>Sub-patterns:</strong></p>
+      <p><strong>Single-Agent:</strong> One agent manages retrieval, routing, and generation. Good for systems with limited tools or data sources.</p>
+      <p><strong>Multi-Agent:</strong> Specialized agents for different roles — one retrieves, one validates, one synthesizes. Enables parallel processing and handles diverse query types.</p>
+      <p><strong>Adaptive:</strong> Dynamically adjusts strategy based on query complexity. Simple questions get fast retrieval; complex ones trigger multi-step reasoning.</p>
+      <div class="warning-box">
+        <div class="tip-label">⚠ Complexity Warning</div>
+        <p>Agentic RAG is powerful but hard to debug. Each agent call adds latency and cost. Start with single-agent, prove value, then decompose into multi-agent only if you have genuinely distinct retrieval domains.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-content" data-tab="hybrid">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon" style="background:rgba(96,165,250,0.1);color:var(--info)">🔀</div>
+        <div><div class="card-title">Hybrid RAG</div><span class="tag tag-blue">Multi-Strategy</span></div>
+      </div>
+      <p>Combines multiple retrieval strategies in one system — typically dense vector search + sparse keyword search (BM25), merged via Reciprocal Rank Fusion (RRF). The idea: vectors catch semantic meaning, keywords catch exact terms.</p>
+      <p><strong>Why both:</strong> Pure vector search misses product IDs, ticket numbers, error codes, version tags. Pure keyword search misses paraphrased intent. Hybrid catches both.</p>
+      <div class="tip-box">
+        <div class="tip-label">💡 Practitioner Tip</div>
+        <p>Teams mixing keyword and vector search see double-digit gains in relevance without sacrificing latency — this is low-hanging fruit most teams still ignore. Start with a 0.5 alpha (equal weighting) and tune from there. For enterprise data with lots of identifiers, bias toward BM25 (alpha 0.6–0.7).</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-content" data-tab="multimodal">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon" style="background:rgba(244,114,182,0.1);color:var(--pink)">🖼️</div>
+        <div><div class="card-title">Multimodal RAG</div><span class="tag tag-pink">Beyond Text</span></div>
+      </div>
+      <p>Integrates image, audio, tabular, and video embeddings into retrieval. A maintenance engineer can ask "Show me the failure pattern for turbine blade anomalies" and the system retrieves technical diagrams, sensor logs, and text reports together.</p>
+      <p><strong>Architecture:</strong> Query (text/image/audio) → Retriever (multi-modal embeddings) → Top hits across modalities → Generator (multi-modal model)</p>
+      <div class="tip-box">
+        <div class="tip-label">💡 Practitioner Tip</div>
+        <p>Don't try to embed everything into one vector space. Use modality-specific embedders (CLIP for images, Whisper for audio) and merge results at the ranking stage. This avoids the "jack of all trades, master of none" problem.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Comparison Table -->
+  <h3>Quick Comparison</h3>
+  <div style="overflow-x:auto;">
+  <table class="comparison-table">
+    <tr><th>Type</th><th>Complexity</th><th>Best For</th><th>Key Trade-off</th></tr>
+    <tr><td><strong>Naive</strong></td><td>Low</td><td>Prototypes, small clean datasets</td><td>Fast but inaccurate</td></tr>
+    <tr><td><strong>Advanced</strong></td><td>Medium</td><td>Most production systems</td><td>Good balance of quality/speed</td></tr>
+    <tr><td><strong>Self-RAG</strong></td><td>High</td><td>High-precision domains</td><td>Accuracy vs. latency</td></tr>
+    <tr><td><strong>Corrective</strong></td><td>Medium</td><td>Compliance, regulated industries</td><td>Modular but adds pipeline stages</td></tr>
+    <tr><td><strong>Graph</strong></td><td>High</td><td>Relationship-heavy data</td><td>Powerful but needs graph infrastructure</td></tr>
+    <tr><td><strong>Agentic</strong></td><td>Very High</td><td>Complex multi-step research</td><td>Flexible but hard to debug</td></tr>
+    <tr><td><strong>Hybrid</strong></td><td>Medium</td><td>Enterprise data with mixed identifiers</td><td>Best ROI improvement per effort</td></tr>
+    <tr><td><strong>Multimodal</strong></td><td>High</td><td>Mixed media corpora</td><td>Embedding alignment across modalities</td></tr>
+  </table>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SECTION 2: THE PIPELINE -->
+<!-- ═══════════════════════════════════════════ -->
+<section id="pipeline">
+  <h2><span class="section-num">02 — THE RAG PIPELINE</span>Anatomy of a Production System</h2>
+  <p class="lead">Every RAG system has the same bones. Mastery is knowing which bone to strengthen for your use case.</p>
+
+  <div class="pipeline" style="flex-wrap: wrap; justify-content: center;">
+    <div class="pipeline-step"><div class="step-icon">📥</div><div class="step-label">Ingest</div><div class="step-sub">load & parse</div></div>
+    <div class="pipeline-arrow">→</div>
+    <div class="pipeline-step"><div class="step-icon">✂️</div><div class="step-label">Chunk</div><div class="step-sub">split strategy</div></div>
+    <div class="pipeline-arrow">→</div>
+    <div class="pipeline-step"><div class="step-icon">🧬</div><div class="step-label">Embed</div><div class="step-sub">vectorize</div></div>
+    <div class="pipeline-arrow">→</div>
+    <div class="pipeline-step"><div class="step-icon">💾</div><div class="step-label">Index</div><div class="step-sub">vector DB</div></div>
+    <div class="pipeline-arrow">→</div>
+    <div class="pipeline-step" style="border-color:var(--info)"><div class="step-icon">🔄</div><div class="step-label">Query Proc.</div><div class="step-sub">transform</div></div>
+    <div class="pipeline-arrow">→</div>
+    <div class="pipeline-step"><div class="step-icon">🔍</div><div class="step-label">Retrieve</div><div class="step-sub">search</div></div>
+    <div class="pipeline-arrow">→</div>
+    <div class="pipeline-step" style="border-color:var(--purple)"><div class="step-icon">📊</div><div class="step-label">Rerank</div><div class="step-sub">re-order</div></div>
+    <div class="pipeline-arrow">→</div>
+    <div class="pipeline-step" style="border-color:var(--accent)"><div class="step-icon">✨</div><div class="step-label">Generate</div><div class="step-sub">LLM output</div></div>
+  </div>
+
+  <div class="tip-box">
+    <div class="tip-label">💡 The Golden Rule</div>
+    <p>You can't fix a mis-framed question later in the pipeline. Treat every user query as raw material to be refined — query processing is the "front door" of your architecture.</p>
+  </div>
+
+  <h3>The Two Phases</h3>
+  <div class="grid-2">
+    <div class="card">
+      <h4>Indexing (Offline)</h4>
+      <p>Happens once (or on a schedule). Load documents → clean & parse → chunk → enrich with metadata → embed → store in vector DB + keyword index. This is where you invest in data quality.</p>
+      <div class="tip-box">
+        <div class="tip-label">💡 Tip</div>
+        <p>Index-time is cheap, query-time is expensive. Front-load as much work as possible into indexing — contextual headers, metadata extraction, pre-computed summaries. Every dollar spent here saves ten at query time.</p>
+      </div>
+    </div>
+    <div class="card">
+      <h4>Querying (Online)</h4>
+      <p>Happens per request. Process user query → transform/expand → retrieve from index → rerank results → compress context → generate response → (optional) validate output.</p>
+      <div class="tip-box">
+        <div class="tip-label">💡 Tip</div>
+        <p>Set a latency budget. Decide upfront: are you optimizing for sub-second responses (chatbot) or can you tolerate 5-10s (research assistant)? This shapes every downstream choice.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SECTION 3: CHUNKING -->
+<!-- ═══════════════════════════════════════════ -->
+<section id="chunking">
+  <h2><span class="section-num">03 — CHUNKING STRATEGIES</span>How You Split Changes Everything</h2>
+  <p class="lead">Chunking is the most underrated part of RAG. Bad chunking poisons everything downstream — no amount of reranking fixes context ripped from its meaning.</p>
+
+  <div class="accordion" id="chunkAccordion">
+    <div class="accordion-item">
+      <button class="accordion-btn">Fixed-Size Token Chunking <span class="arrow">▼</span></button>
+      <div class="accordion-body"><div class="accordion-body-inner">
+        <p>Split text into fixed token windows (e.g., 512 tokens) with overlap (e.g., 50-100 tokens). The simplest approach.</p>
+        <p><strong>When to use:</strong> Homogeneous content, initial prototyping, when you need predictable chunk sizes for cost estimation.</p>
+        <pre><code><span class="cm"># LangChain example</span>
+<span class="kw">from</span> langchain.text_splitter <span class="kw">import</span> TokenTextSplitter
+splitter = TokenTextSplitter(
+    chunk_size=<span class="num">512</span>,
+    chunk_overlap=<span class="num">50</span>
+)</code></pre>
+        <div class="warning-box">
+          <div class="tip-label">⚠ Pitfall</div>
+          <p>Fixed-size splits mid-sentence and mid-paragraph, destroying context boundaries. A paragraph about "Q2 revenue" may get split so the number is in one chunk and the context is in another.</p>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="accordion-item">
+      <button class="accordion-btn">Recursive Character Splitting <span class="arrow">▼</span></button>
+      <div class="accordion-body"><div class="accordion-body-inner">
+        <p>Tries to split on natural boundaries in order: paragraph breaks → sentence breaks → word breaks → character breaks. Only falls to the next level if chunks are still too large.</p>
+        <p><strong>When to use:</strong> General-purpose. Good default for most text documents. Respects natural boundaries while staying within size limits.</p>
+        <pre><code><span class="cm"># Recommended default separators</span>
+separators = [<span class="str">"\n\n"</span>, <span class="str">"\n"</span>, <span class="str">". "</span>, <span class="str">" "</span>, <span class="str">""</span>]</code></pre>
+        <div class="tip-box">
+          <div class="tip-label">💡 Tip</div>
+          <p>This is the sweet spot for most teams. Paragraph-level splitting balances context and precision, improving recall by 15-25% per LangChain evaluations.</p>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="accordion-item">
+      <button class="accordion-btn">Semantic Chunking <span class="arrow">▼</span></button>
+      <div class="accordion-body"><div class="accordion-body-inner">
+        <p>Uses embeddings to detect topic shifts. Sentences with high semantic similarity stay grouped; a significant drop in similarity triggers a new chunk boundary.</p>
+        <p><strong>When to use:</strong> Technical documentation, product manuals, long-form research where topics weave in and out.</p>
+        <div class="tip-box">
+          <div class="tip-label">💡 Tip</div>
+          <p>Semantic chunking costs more (requires embedding every sentence), but pays off for complex content. For simpler content like FAQs or short articles, fixed-size chunks work fine — don't over-engineer.</p>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="accordion-item">
+      <button class="accordion-btn">Document-Structure-Aware Chunking <span class="arrow">▼</span></button>
+      <div class="accordion-body"><div class="accordion-body-inner">
+        <p>Respects the document's own structure — headings, sections, tables, code blocks. Splits at structural boundaries rather than arbitrary positions.</p>
+        <p><strong>When to use:</strong> Markdown docs, HTML pages, technical specifications, legal contracts with numbered sections.</p>
+        <div class="tip-box">
+          <div class="tip-label">💡 Tip</div>
+          <p>Parse the document format first (Markdown headers, HTML tags, PDF structure) and use those as primary split points. This preserves the author's intended grouping of information.</p>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="accordion-item">
+      <button class="accordion-btn">Parent-Document / Hierarchical Chunking <span class="arrow">▼</span></button>
+      <div class="accordion-body"><div class="accordion-body-inner">
+        <p>Store documents at multiple granularities — small chunks for precise retrieval, large parent chunks for full context. Retrieve on the small chunk, but pass the parent chunk to the LLM.</p>
+        <p><strong>The insight:</strong> Small chunks retrieve with higher precision. But the LLM needs surrounding context to generate good answers. Parent-doc gives you both.</p>
+        <pre><code><span class="cm"># Hierarchy: Section → Paragraph → Sentence</span>
+<span class="cm"># Retrieve: match at sentence level</span>
+<span class="cm"># Return: the full paragraph (or section) containing the match</span>
+matched_sentence = <span class="fn">retrieve</span>(query, level=<span class="str">"sentence"</span>)
+parent_paragraph = <span class="fn">get_parent</span>(matched_sentence)
+answer = <span class="fn">generate</span>(query, context=parent_paragraph)</code></pre>
+        <div class="tip-box">
+          <div class="tip-label">💡 Tip</div>
+          <p>This is one of the highest-impact techniques for reducing hallucination. The small chunk ensures you find the right spot; the parent chunk ensures the LLM has enough context to answer correctly.</p>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- CONTEXTUAL RETRIEVAL -->
+  <h3>Anthropic's Contextual Retrieval: The Chunk Context Problem</h3>
+  <div class="card" style="border-color: var(--accent);">
+    <p>Traditional chunking loses context. A chunk might say <em>"The company's revenue grew by 3% over the previous quarter"</em> — but which company? Which quarter? The chunk was ripped from its document context.</p>
+    <p><strong>Anthropic's solution:</strong> Before embedding, use an LLM to prepend a short contextual explanation to each chunk that situates it within the full document. This "contextual header" dramatically reduces retrieval failure.</p>
+    <pre><code><span class="cm"># Contextual Retrieval: prepend context to each chunk</span>
+<span class="kw">for</span> chunk <span class="kw">in</span> document.chunks:
+    context = <span class="fn">llm.generate</span>(
+        prompt=<span class="str">f"""Given the full document, provide a short context
+        for this chunk. Document: {document.full_text}
+        Chunk: {chunk.text}"""</span>
+    )
+    chunk.text = <span class="str">f"{context}\n{chunk.text}"</span>
+    chunk.embedding = <span class="fn">embed</span>(chunk.text)</code></pre>
+    <div class="tip-box">
+      <div class="tip-label">💡 Key Numbers</div>
+      <p>Contextual embeddings alone reduce retrieval failure by 35%. Combined with contextual BM25 and reranking, failures drop by 67%. Use prompt caching to keep costs manageable — the full document is the same across all chunks, so cache it.</p>
+    </div>
+    <div class="warning-box">
+      <div class="tip-label">⚠ Cost Consideration</div>
+      <p>You make one LLM call per chunk during indexing (passing the entire document each time). Use a small, cheap model (e.g., Haiku-class) for context generation. With prompt caching, the document tokens are only billed once.</p>
+    </div>
+  </div>
+
+  <h3>Chunk Size: The Most Debated Hyperparameter</h3>
+  <div class="grid-2">
+    <div class="card">
+      <h4>Small chunks (200-400 tokens)</h4>
+      <p><strong>Pros:</strong> Higher retrieval precision, less noise, lower token cost per retrieval.</p>
+      <p><strong>Cons:</strong> May lack sufficient context for generation, need more chunks to cover a topic.</p>
+      <p><strong>Best for:</strong> Q&A, factoid retrieval, structured docs.</p>
+    </div>
+    <div class="card">
+      <h4>Large chunks (800-1500 tokens)</h4>
+      <p><strong>Pros:</strong> More context per chunk, better for complex reasoning, fewer retrieval calls needed.</p>
+      <p><strong>Cons:</strong> More noise per chunk, higher token cost, lower retrieval precision.</p>
+      <p><strong>Best for:</strong> Summarization, analysis, long-form answers.</p>
+    </div>
+  </div>
+  <div class="tip-box">
+    <div class="tip-label">💡 The Right Answer</div>
+    <p>There is no universal optimal chunk size. Test 400, 600, 800, and 1000 on your actual data with your actual queries. Measure precision-recall on a held-out eval set. The "best" size depends on your domain, doc types, and query patterns. GCP's RAG Engine team recommends starting with 512 tokens and 100 token overlap for production, then tuning.</p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SECTION 4: RETRIEVAL -->
+<!-- ═══════════════════════════════════════════ -->
+<section id="retrieval">
+  <h2><span class="section-num">04 — RETRIEVAL TECHNIQUES</span>Finding the Right Needle</h2>
+  <p class="lead">Retrieval is the make-or-break stage. If you retrieve the wrong documents, no amount of prompt engineering will save you.</p>
+
+  <h3>Search Strategies</h3>
+  <div class="accordion" id="retrievalAccordion">
+    <div class="accordion-item">
+      <button class="accordion-btn">Dense Vector Search <span class="arrow">▼</span></button>
+      <div class="accordion-body"><div class="accordion-body-inner">
+        <p>Embeds queries and documents into the same vector space, then finds nearest neighbors by cosine similarity. Catches semantic meaning and paraphrases well.</p>
+        <p><strong>Weakness:</strong> Fails on exact identifiers — product IDs, error codes, ticket numbers, version tags lose priority in embedding space. Also struggles with negation and very short queries.</p>
+        <div class="tip-box">
+          <div class="tip-label">💡 Tip</div>
+          <p>Never use dense search alone in production. It's necessary but not sufficient. Always pair with keyword search for hybrid retrieval.</p>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="accordion-item">
+      <button class="accordion-btn">Sparse Search (BM25) <span class="arrow">▼</span></button>
+      <div class="accordion-body"><div class="accordion-body-inner">
+        <p>Classic keyword-based search using term frequency and inverse document frequency. Excels at exact matches, specific terms, identifiers.</p>
+        <p><strong>Weakness:</strong> No semantic understanding. "Car" and "automobile" are completely different terms. Can't handle paraphrasing or intent.</p>
+        <div class="tip-box">
+          <div class="tip-label">💡 Tip</div>
+          <p>BM25 is free to run (local computation), requires no GPU, and is surprisingly competitive for queries containing unique identifiers or technical terms. Don't dismiss it as "old school."</p>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="accordion-item">
+      <button class="accordion-btn">Hybrid Search + Reciprocal Rank Fusion <span class="arrow">▼</span></button>
+      <div class="accordion-body"><div class="accordion-body-inner">
+        <p>Run both dense and sparse search in parallel, then merge results using Reciprocal Rank Fusion (RRF). Each result gets a score based on its rank in each list, and the combined scores determine the final ordering.</p>
+        <pre><code><span class="cm"># Reciprocal Rank Fusion</span>
+<span class="kw">def</span> <span class="fn">rrf_score</span>(rank, k=<span class="num">60</span>):
+    <span class="kw">return</span> <span class="num">1.0</span> / (k + rank)
+
+<span class="cm"># Merge results from vector and keyword search</span>
+combined = {}
+<span class="kw">for</span> rank, doc <span class="kw">in</span> <span class="fn">enumerate</span>(vector_results):
+    combined[doc.id] = combined.get(doc.id, <span class="num">0</span>) + <span class="fn">rrf_score</span>(rank)
+<span class="kw">for</span> rank, doc <span class="kw">in</span> <span class="fn">enumerate</span>(keyword_results):
+    combined[doc.id] = combined.get(doc.id, <span class="num">0</span>) + <span class="fn">rrf_score</span>(rank)
+
+<span class="cm"># Sort by combined score</span>
+final_results = <span class="fn">sorted</span>(combined.items(), key=<span class="kw">lambda</span> x: x[<span class="num">1</span>], reverse=<span class="kw">True</span>)</code></pre>
+        <div class="tip-box">
+          <div class="tip-label">💡 Alpha Tuning</div>
+          <p>Many vector DBs let you set an alpha weight between dense and sparse. Start at 0.5 (equal weight). For enterprise data with lots of IDs/codes, bias toward BM25 (alpha 0.6-0.7). For conversational queries, bias toward vectors (alpha 0.3-0.4).</p>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="accordion-item">
+      <button class="accordion-btn">Metadata Filtering <span class="arrow">▼</span></button>
+      <div class="accordion-body"><div class="accordion-body-inner">
+        <p>Pre-filter your search by structured metadata (date, department, document type, version, language, tenant) before running similarity search. Reduces the search space and ensures relevance.</p>
+        <div class="tip-box">
+          <div class="tip-label">💡 Tip</div>
+          <p>Metadata filtering is non-negotiable for multi-tenant systems. Always attach: source document name, page number, section heading, date, version, and any domain-specific tags. Rich metadata is the difference between "I found something related" and "I found the exact section."</p>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+  <h3>Reranking: The Precision Multiplier</h3>
+  <div class="card">
+    <p>After initial retrieval returns a broad set of candidates (top-50 to top-150), a reranker rescores each result against the query with a more powerful model.</p>
+    <div class="grid-2">
+      <div>
+        <h4>Cross-Encoder Reranking</h4>
+        <p>Feeds the query + each candidate chunk through a transformer model (BERT-based) that outputs a relevance score. Very accurate but slower — processes each pair individually.</p>
+        <p><strong>Best when:</strong> Quality matters more than latency.</p>
+      </div>
+      <div>
+        <h4>LLM-as-Reranker</h4>
+        <p>Use the LLM itself to score relevance (e.g., "Rate 1-10 how relevant this passage is to the query"). More flexible but more expensive.</p>
+        <p><strong>Best when:</strong> Domain-specific relevance that off-the-shelf models don't capture.</p>
+      </div>
+    </div>
+    <div class="tip-box">
+      <div class="tip-label">💡 The "Lost in the Middle" Problem</div>
+      <p>LLMs pay most attention to the beginning and end of their context window, and least attention to the middle. Reranking solves this by putting the most relevant content first. This single change can dramatically improve answer quality — it's why Google's Vertex AI team considers reranking essential for production RAG.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SECTION 5: QUERY + GENERATION -->
+<!-- ═══════════════════════════════════════════ -->
+<section id="generation">
+  <h2><span class="section-num">05 — QUERY PROCESSING & GENERATION</span>The Front Door and the Back Door</h2>
+  <p class="lead">Smart query processing can outperform larger models on the same data. And generation is where all your retrieval work pays off — or doesn't.</p>
+
+  <h3>Query Transformation Techniques</h3>
+
+  <div class="card">
+    <h4>HyDE — Hypothetical Document Embeddings</h4>
+    <p>Instead of embedding the short user query directly, ask the LLM to generate a hypothetical answer first, then embed <em>that</em> for retrieval. Since documents in your DB contain answers (not questions), a hypothetical answer is more semantically similar to the actual documents.</p>
+    <pre><code><span class="cm"># HyDE flow</span>
+user_query = <span class="str">"What is the refund policy?"</span>
+
+<span class="cm"># Step 1: Generate hypothetical answer</span>
+hypothetical = <span class="fn">llm.generate</span>(<span class="str">f"Write a detailed answer to: {user_query}"</span>)
+<span class="cm"># → "Our refund policy allows returns within 30 days of purchase..."</span>
+
+<span class="cm"># Step 2: Embed the hypothetical answer (not the question)</span>
+query_embedding = <span class="fn">embed</span>(hypothetical)
+
+<span class="cm"># Step 3: Retrieve documents similar to the hypothetical answer</span>
+results = <span class="fn">vector_search</span>(query_embedding, top_k=<span class="num">10</span>)</code></pre>
+    <div class="warning-box">
+      <div class="tip-label">⚠ HyDE Caveat</div>
+      <p>HyDE only works well when the LLM has <em>some</em> knowledge about the topic. If it generates a completely wrong hypothetical, retrieval will go off the rails. Always test with queries where the LLM has zero domain knowledge — if results degrade, add a fallback to standard embedding.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h4>Multi-Query Expansion</h4>
+    <p>Generate multiple reformulations of the user's query, run retrieval for each, and merge the results. Catches documents that match different phrasings of the same intent.</p>
+    <pre><code><span class="cm"># User asks: "How do I handle errors in async Python?"</span>
+<span class="cm"># Generated sub-queries:</span>
+queries = [
+    <span class="str">"Python asyncio exception handling"</span>,
+    <span class="str">"try except in async await Python"</span>,
+    <span class="str">"error handling patterns for asynchronous Python code"</span>
+]
+<span class="cm"># Retrieve for each, merge with RRF, deduplicate</span></code></pre>
+  </div>
+
+  <div class="card">
+    <h4>Step-Back Prompting</h4>
+    <p>Before retrieving, ask the LLM to rephrase the query at a higher level of abstraction. "What's the GDP of France in 2024?" becomes "What are France's recent economic indicators?" — casting a wider net that catches relevant context.</p>
+  </div>
+
+  <div class="card">
+    <h4>Query Decomposition</h4>
+    <p>Break complex multi-part questions into simpler sub-questions, retrieve for each independently, then synthesize.</p>
+    <pre><code><span class="cm"># Complex: "Compare the revenue growth and employee count</span>
+<span class="cm">#          of Apple and Google over the last 3 years"</span>
+<span class="cm"># Decomposed:</span>
+sub_queries = [
+    <span class="str">"Apple revenue growth 2023-2026"</span>,
+    <span class="str">"Google revenue growth 2023-2026"</span>,
+    <span class="str">"Apple employee count 2023-2026"</span>,
+    <span class="str">"Google employee count 2023-2026"</span>
+]</code></pre>
+  </div>
+
+  <h3>Context Compression</h3>
+  <div class="card">
+    <p>After retrieval and reranking, pass the retrieved documents through the LLM to extract only the relevant parts before generating the final answer. This reduces noise and saves tokens.</p>
+    <div class="tip-box">
+      <div class="tip-label">💡 Tip</div>
+      <p>Context compression is especially valuable when your chunks are large. Instead of passing 5 full paragraphs, compress each to just the sentences relevant to the query. Less noise = sharper answers + lower token costs.</p>
+    </div>
+  </div>
+
+  <h3>Generation Best Practices</h3>
+  <div class="checklist" id="genChecklist">
+    <div class="checklist-item">
+      <button class="checklist-box" onclick="this.classList.toggle('checked')">✓</button>
+      <div class="checklist-text"><strong>Always include source attribution.</strong> Instruct the LLM to cite which chunks it used. This enables fact-checking and builds user trust.</div>
+    </div>
+    <div class="checklist-item">
+      <button class="checklist-box" onclick="this.classList.toggle('checked')">✓</button>
+      <div class="checklist-text"><strong>Set the system prompt to ground answers in retrieved context.</strong> Explicitly say: "Answer based ONLY on the provided context. If the context doesn't contain the answer, say so."</div>
+    </div>
+    <div class="checklist-item">
+      <button class="checklist-box" onclick="this.classList.toggle('checked')">✓</button>
+      <div class="checklist-text"><strong>Order context by relevance.</strong> Place the most relevant chunks first in the prompt, due to the "lost in the middle" effect.</div>
+    </div>
+    <div class="checklist-item">
+      <button class="checklist-box" onclick="this.classList.toggle('checked')">✓</button>
+      <div class="checklist-text"><strong>Use structured context delimiters.</strong> Wrap each chunk in clear XML-like tags with metadata: <code>&lt;source doc="..." page="..."&gt;</code>.</div>
+    </div>
+    <div class="checklist-item">
+      <button class="checklist-box" onclick="this.classList.toggle('checked')">✓</button>
+      <div class="checklist-text"><strong>Include a "no answer" escape hatch.</strong> The LLM should be able to say "I couldn't find enough information" rather than hallucinating.</div>
+    </div>
+    <div class="checklist-item">
+      <button class="checklist-box" onclick="this.classList.toggle('checked')">✓</button>
+      <div class="checklist-text"><strong>Control temperature.</strong> Use low temperature (0.0-0.2) for factual Q&A, moderate (0.3-0.5) for synthesis and summarization tasks.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SECTION 6: ADVANCED TECHNIQUES -->
+<!-- ═══════════════════════════════════════════ -->
+<section id="advanced">
+  <h2><span class="section-num">06 — ADVANCED TECHNIQUES</span>The Techniques That Separate Good From Great</h2>
+  <p class="lead">These are the patterns that emerge when teams have graduated past the basics and are optimizing for real-world edge cases.</p>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon" style="background:rgba(110,231,183,0.1);color:var(--accent)">🏷️</div>
+      <div class="card-title">Contextual Headers at Index Time</div>
+    </div>
+    <p>Prepend document-level metadata to every chunk before embedding: document title, section heading, date, author, summary. The chunk carries its own context wherever it goes.</p>
+    <pre><code><span class="cm"># Before: chunk is orphaned</span>
+chunk = <span class="str">"Revenue grew 3% over the previous quarter."</span>
+
+<span class="cm"># After: chunk carries context</span>
+chunk = <span class="str">"""[Source: ACME Corp Q2 2025 Earnings Report]
+[Section: Financial Highlights]
+[Date: July 2025]
+Revenue grew 3% over the previous quarter."""</span></code></pre>
+    <div class="tip-box">
+      <div class="tip-label">💡 Tip</div>
+      <p>This is the cheapest, highest-ROI improvement you can make. Zero LLM calls, zero latency impact. Just string concatenation at index time. Do this before anything else.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon" style="background:rgba(167,139,250,0.1);color:var(--purple)">🔁</div>
+      <div class="card-title">Iterative / Multi-Hop Retrieval</div>
+    </div>
+    <p>For complex questions, one retrieval pass isn't enough. Retrieve, read, formulate a follow-up query based on what you learned, retrieve again. Like "zooming in" — first pass finds the right area, second pass finds the exact answer.</p>
+    <pre><code><span class="cm"># Multi-hop: "What regulations affect the drug that treats</span>
+<span class="cm">#           the disease mentioned in Dr. Smith's latest paper?"</span>
+<span class="cm"># Hop 1: Find Dr. Smith's paper → disease name</span>
+<span class="cm"># Hop 2: Find drugs for that disease → drug name</span>
+<span class="cm"># Hop 3: Find regulations for that drug → answer</span></code></pre>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon" style="background:rgba(96,165,250,0.1);color:var(--info)">📝</div>
+      <div class="card-title">Query Routing</div>
+    </div>
+    <p>Not all queries need the same retrieval strategy. A lightweight classifier routes each query to the appropriate pipeline: simple queries → fast retrieval, complex queries → multi-hop, factual queries → keyword-heavy, exploratory queries → semantic-heavy.</p>
+    <div class="tip-box">
+      <div class="tip-label">💡 Tip</div>
+      <p>You can implement routing with a simple LLM call: "Classify this query as SIMPLE, COMPLEX, or ANALYTICAL." Then branch to different retrieval configurations. This saves cost on simple queries and improves quality on complex ones.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon" style="background:rgba(244,114,182,0.1);color:var(--pink)">💾</div>
+      <div class="card-title">Retrieval-Based Memory</div>
+    </div>
+    <p>Store conversation history in the same vector store as documents. When a user asks a follow-up, the system retrieves relevant prior messages alongside document chunks, enabling contextual multi-turn conversations without stuffing the entire history into the prompt.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon" style="background:rgba(251,146,60,0.1);color:var(--orange)">📄</div>
+      <div class="card-title">Summary-Level Indexing</div>
+    </div>
+    <p>Pre-compute summaries of each document (or section) and index those summaries alongside the detailed chunks. Broad queries hit summaries first, then drill into detail chunks for specific answers.</p>
+    <div class="tip-box">
+      <div class="tip-label">💡 Tip</div>
+      <p>This technique pairs perfectly with parent-document retrieval. Summary → full section → specific chunk forms a three-level hierarchy that handles everything from "give me an overview" to "what's the exact number."</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon" style="background:rgba(45,212,191,0.1);color:var(--teal)">🔗</div>
+      <div class="card-title">Citation & Grounding</div>
+    </div>
+    <p>Force the LLM to output inline citations pointing to specific chunks. Then verify those citations by checking if the cited chunk actually supports the claim. This is the foundation of trustworthy RAG.</p>
+    <pre><code><span class="cm"># System prompt for citation</span>
+<span class="str">"""When answering, cite your sources using [1], [2], etc.
+Each citation must reference a specific chunk from the context.
+If a claim cannot be supported by the context, do not make it.
+At the end, list all cited sources with their chunk IDs."""</span></code></pre>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SECTION 7: EVALUATION -->
+<!-- ═══════════════════════════════════════════ -->
+<section id="eval">
+  <h2><span class="section-num">07 — EVALUATION</span>Measuring What Matters</h2>
+  <p class="lead">LLMs are non-deterministic. The same prompt can produce different outputs across runs. Without proper evaluation, you're flying blind.</p>
+
+  <h3>The Two Halves of RAG Evaluation</h3>
+  <div class="grid-2">
+    <div class="card">
+      <h4>Retrieval Quality</h4>
+      <p><strong>Precision@k:</strong> Of the k retrieved documents, how many are relevant? Measures noise — are you fetching junk?</p>
+      <p><strong>Recall@k:</strong> Of all relevant documents in the corpus, how many did you retrieve? Measures coverage — are you missing anything?</p>
+      <p><strong>MRR (Mean Reciprocal Rank):</strong> How high does the first relevant result appear? Position matters — rank 1 is worth 10x rank 5.</p>
+    </div>
+    <div class="card">
+      <h4>Generation Quality</h4>
+      <p><strong>Faithfulness:</strong> Does the answer actually follow from the retrieved context? Catches hallucination where the LLM invents unsupported claims.</p>
+      <p><strong>Answer Relevance:</strong> Does the answer address the question? A factually correct but off-topic answer still fails the user.</p>
+      <p><strong>Context Relevance:</strong> Are the retrieved chunks relevant to the question? Isolates whether poor answers stem from bad retrieval or bad generation.</p>
+    </div>
+  </div>
+
+  <h3>The RAGAS Framework</h3>
+  <div class="card" style="border-color: var(--purple);">
+    <p>RAGAS (Retrieval Augmented Generation Assessment) is the de facto standard for end-to-end RAG evaluation. It measures four dimensions without requiring ground-truth labels:</p>
+    <div style="overflow-x:auto;">
+    <table class="comparison-table">
+      <tr><th>Metric</th><th>What It Measures</th><th>How</th></tr>
+      <tr><td><strong>Faithfulness</strong></td><td>Is the answer grounded in the context?</td><td>LLM checks if each claim has supporting evidence</td></tr>
+      <tr><td><strong>Answer Relevance</strong></td><td>Does the answer address the question?</td><td>Generates questions from the answer, checks similarity to original</td></tr>
+      <tr><td><strong>Context Precision</strong></td><td>Are relevant chunks ranked higher?</td><td>Checks ordering of useful vs. useless context</td></tr>
+      <tr><td><strong>Context Recall</strong></td><td>Is all needed info retrieved?</td><td>Checks if ground truth answers are covered by context</td></tr>
+    </table>
+    </div>
+    <div class="tip-box">
+      <div class="tip-label">💡 Tip</div>
+      <p>Run RAGAS as a CI/CD gate. Before deploying any RAG pipeline change, automatically run your eval suite against a held-out set of question-answer pairs. If faithfulness drops below threshold, block the deploy.</p>
+    </div>
+  </div>
+
+  <h3>Building Your Eval Set</h3>
+  <div class="checklist">
+    <div class="checklist-item">
+      <button class="checklist-box" onclick="this.classList.toggle('checked')">✓</button>
+      <div class="checklist-text"><strong>Start with 50-100 real user queries</strong> from logs. Synthetic queries miss the patterns real users create.</div>
+    </div>
+    <div class="checklist-item">
+      <button class="checklist-box" onclick="this.classList.toggle('checked')">✓</button>
+      <div class="checklist-text"><strong>Include adversarial cases:</strong> queries that should return "I don't know," queries with negation, multi-part questions, queries using domain jargon vs. plain language.</div>
+    </div>
+    <div class="checklist-item">
+      <button class="checklist-box" onclick="this.classList.toggle('checked')">✓</button>
+      <div class="checklist-text"><strong>Tag queries by difficulty:</strong> simple factoid, multi-hop reasoning, comparison, summarization. Track metrics per category to find weaknesses.</div>
+    </div>
+    <div class="checklist-item">
+      <button class="checklist-box" onclick="this.classList.toggle('checked')">✓</button>
+      <div class="checklist-text"><strong>Version your eval set.</strong> As your corpus changes, update your test questions to match. Stale evals give false confidence.</div>
+    </div>
+    <div class="checklist-item">
+      <button class="checklist-box" onclick="this.classList.toggle('checked')">✓</button>
+      <div class="checklist-text"><strong>Blend automated + human evaluation.</strong> RAGAS catches systematic issues; human review catches nuance, tone, and "feels wrong" answers that metrics miss.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SECTION 8: PRODUCTION -->
+<!-- ═══════════════════════════════════════════ -->
+<section id="production">
+  <h2><span class="section-num">08 — PRODUCTION PLAYBOOK</span>30 Battle-Tested Tips</h2>
+  <p class="lead">Hard-won lessons from teams running RAG in production at scale. Organized by pipeline stage.</p>
+
+  <div class="tabs" id="tipTabs">
+    <button class="tab active" data-tab="data-tips">Data & Ingestion</button>
+    <button class="tab" data-tab="retrieval-tips">Retrieval</button>
+    <button class="tab" data-tab="gen-tips">Generation</button>
+    <button class="tab" data-tab="ops-tips">Operations</button>
+  </div>
+
+  <div class="tab-content active" data-tab="data-tips">
+    <div class="tip-box"><div class="tip-label">Tip #1</div><p><strong>Clean your data before anything else.</strong> Garbage in, garbage out applies tenfold to RAG. Remove duplicate documents, fix encoding issues, strip boilerplate headers/footers. This alone can improve retrieval quality by 20%+.</p></div>
+    <div class="tip-box"><div class="tip-label">Tip #2</div><p><strong>Extract and index metadata aggressively.</strong> Date, author, department, document type, version number, language, section headings. Rich metadata enables pre-filtering that massively reduces your search space.</p></div>
+    <div class="tip-box"><div class="tip-label">Tip #3</div><p><strong>Chunk configuration is per-import, not per-corpus.</strong> You can re-import the same files with different chunking to test what works. Don't lock yourself into one strategy — GCP's Vertex team recommends treating chunk size as a tunable parameter.</p></div>
+    <div class="tip-box"><div class="tip-label">Tip #4</div><p><strong>Use overlap between chunks.</strong> 10-20% overlap ensures that information at chunk boundaries isn't lost. For a 512-token chunk, use 50-100 tokens of overlap.</p></div>
+    <div class="tip-box"><div class="tip-label">Tip #5</div><p><strong>Prepend contextual headers to every chunk at index time.</strong> Document title, section heading, date. Zero cost, massive impact. Do this before any fancy techniques.</p></div>
+    <div class="tip-box"><div class="tip-label">Tip #6</div><p><strong>Build both a vector index and a BM25 index.</strong> BM25 indexing is free (local computation). The two together consistently outperform either alone.</p></div>
+    <div class="tip-box"><div class="tip-label">Tip #7</div><p><strong>Set up an incremental ingestion pipeline.</strong> Don't re-index everything when one document changes. Track document hashes, only re-embed what's new or modified.</p></div>
+  </div>
+
+  <div class="tab-content" data-tab="retrieval-tips">
+    <div class="tip-box"><div class="tip-label">Tip #8</div><p><strong>Retrieve more, then filter down.</strong> Retrieve top-50 to top-150 candidates, then rerank to get top-5 to top-20. Casting a wider net first ensures you don't miss relevant results that would have been cut off at top-10.</p></div>
+    <div class="tip-box"><div class="tip-label">Tip #9</div><p><strong>Always add a reranker.</strong> Even a simple cross-encoder reranker on top of hybrid search measurably improves answer quality. It's the single best post-retrieval improvement.</p></div>
+    <div class="tip-box"><div class="tip-label">Tip #10</div><p><strong>Set a distance threshold.</strong> Don't return results below a minimum similarity score. It's better to return "I don't have information about this" than to return low-relevance noise that causes hallucination.</p></div>
+    <div class="tip-box"><div class="tip-label">Tip #11</div><p><strong>Tune your alpha (dense vs. sparse weighting).</strong> Start at 0.5, then test 0.3, 0.5, 0.7 on your eval set. The optimal balance depends on your query patterns. Code-heavy? Bias sparse. Conversational? Bias dense.</p></div>
+    <div class="tip-box"><div class="tip-label">Tip #12</div><p><strong>Use query transformation as a first resort, not a last.</strong> A rewritten query costs one cheap LLM call but can make the difference between retrieving the right documents and retrieving nothing useful.</p></div>
+    <div class="tip-box"><div class="tip-label">Tip #13</div><p><strong>Implement query routing for mixed workloads.</strong> Route simple queries to fast pipelines and complex queries to multi-hop pipelines. You save cost and latency on the easy stuff while investing in quality for the hard stuff.</p></div>
+    <div class="tip-box"><div class="tip-label">Tip #14</div><p><strong>Use embedding models matched to your domain.</strong> General-purpose embedding models are fine for general content. For legal, medical, or code domains, fine-tuned embeddings consistently outperform.</p></div>
+  </div>
+
+  <div class="tab-content" data-tab="gen-tips">
+    <div class="tip-box"><div class="tip-label">Tip #15</div><p><strong>Put the most relevant chunk first in context.</strong> LLMs attend most to the beginning. After reranking, your best result should lead the context window.</p></div>
+    <div class="tip-box"><div class="tip-label">Tip #16</div><p><strong>Use structured context formatting.</strong> Wrap each chunk in XML-like tags with metadata: <code>&lt;source doc="policy.pdf" page="3" section="Refunds"&gt;...&lt;/source&gt;</code>. This helps the LLM attribute information correctly.</p></div>
+    <div class="tip-box"><div class="tip-label">Tip #17</div><p><strong>Always provide an "I don't know" escape.</strong> Explicitly instruct the model: "If the provided context does not contain enough information to answer, say so rather than guessing."</p></div>
+    <div class="tip-box"><div class="tip-label">Tip #18</div><p><strong>Force citation in the generation prompt.</strong> "Cite your sources using [1], [2]" enables verification and builds trust. Users can click to verify.</p></div>
+    <div class="tip-box"><div class="tip-label">Tip #19</div><p><strong>Compress context before generation.</strong> For large chunks, extract only the relevant sentences before passing to the LLM. Less noise = sharper answers + lower token costs.</p></div>
+    <div class="tip-box"><div class="tip-label">Tip #20</div><p><strong>Match temperature to the task.</strong> Factual Q&A → 0.0. Summarization → 0.3. Creative synthesis → 0.5. Never use high temperature for grounded RAG responses.</p></div>
+    <div class="tip-box"><div class="tip-label">Tip #21</div><p><strong>Add a self-check pass for critical applications.</strong> After generation, ask the LLM: "Does this answer contain claims not supported by the context?" It catches many hallucinations.</p></div>
+  </div>
+
+  <div class="tab-content" data-tab="ops-tips">
+    <div class="tip-box"><div class="tip-label">Tip #22</div><p><strong>Log everything.</strong> For every query: the raw query, transformed query, retrieved chunks (with scores), reranking results, final context sent to LLM, and the generated answer. You need this for debugging and evaluation.</p></div>
+    <div class="tip-box"><div class="tip-label">Tip #23</div><p><strong>Monitor retrieval quality in production.</strong> Track the average similarity score of top-k results over time. A declining average signals corpus drift or emerging query patterns you haven't optimized for.</p></div>
+    <div class="tip-box"><div class="tip-label">Tip #24</div><p><strong>Set up automated eval as a CI/CD gate.</strong> Run your eval suite before every pipeline change. If faithfulness or relevance drops below threshold, block the deploy.</p></div>
+    <div class="tip-box"><div class="tip-label">Tip #25</div><p><strong>Version your embedding model.</strong> When you switch embedding models, you must re-embed your entire corpus. Plan for this — it's expensive but sometimes necessary.</p></div>
+    <div class="tip-box"><div class="tip-label">Tip #26</div><p><strong>Set corpus refresh schedules.</strong> Stale documents produce stale answers. For fast-moving domains, re-ingest daily. For stable corpora, weekly or on-change is fine.</p></div>
+    <div class="tip-box"><div class="tip-label">Tip #27</div><p><strong>Implement user feedback loops.</strong> Thumbs up/down on answers, with the query and retrieved context attached. This becomes your gold evaluation dataset over time.</p></div>
+    <div class="tip-box"><div class="tip-label">Tip #28</div><p><strong>Budget for latency by pipeline stage.</strong> Know how much each step costs: embedding (5ms), vector search (20ms), reranking (200ms), LLM generation (1-5s). This tells you where to optimize.</p></div>
+    <div class="tip-box"><div class="tip-label">Tip #29</div><p><strong>Use prompt caching for repeated context.</strong> If many queries hit the same documents, prompt caching (available from Anthropic, OpenAI, etc.) can cut generation costs significantly.</p></div>
+    <div class="tip-box"><div class="tip-label">Tip #30</div><p><strong>Start simple, measure, improve iteratively.</strong> The progression: Naive → Hybrid search → Reranking → Contextual headers → Query transformation → CRAG/Self-RAG. Each step should be validated by your eval suite before moving to the next.</p></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SECTION 9: REAL-WORLD IMPLEMENTATION -->
+<!-- ═══════════════════════════════════════════ -->
+<section id="realworld">
+  <h2><span class="section-num">09 — REAL-WORLD IMPLEMENTATION</span>From Repo to Production: Patterns That Ship</h2>
+  <p class="lead">Inspired by <a href="https://github.com/jamwithai/production-agentic-rag-course" style="color:var(--accent)">jamwithai/production-agentic-rag-course</a> (5.9k ★) — a 7-week course building a production agentic RAG system from scratch. Here are the architectural patterns and hard-won insights that make it work.</p>
+
+  <h3>The "BM25 First" Philosophy</h3>
+  <div class="card" style="border-color: var(--warning);">
+    <div class="card-header">
+      <div class="card-icon" style="background:rgba(251,191,36,0.1);color:var(--warning)">🎯</div>
+      <div class="card-title">Build Search Foundations Before Adding AI</div>
+    </div>
+    <p>The most common mistake in RAG engineering: jumping straight to vector search and skipping keyword search entirely. Production teams at successful companies do the opposite — they master BM25 keyword search first, prove it works, then layer semantic vectors on top.</p>
+    <p><strong>Why this matters:</strong> If your BM25 search can't find the right document, your vector search probably can't either — and now you've added complexity, cost, and latency without solving the core problem. BM25 catches exact terms, identifiers, and structured queries that dense vectors routinely miss.</p>
+    <div class="tip-box">
+      <div class="tip-label">💡 The Professional Path</div>
+      <p>Week 3 of the arXiv Paper Curator course builds full BM25 search with OpenSearch before touching vectors. Only in Week 4 do embeddings enter the picture. This mirrors how companies like Elastic, Algolia, and enterprise search teams actually build: solid keyword search enhanced with AI, not AI-first approaches that ignore search fundamentals.</p>
+    </div>
+  </div>
+
+  <h3>Production Infrastructure Stack</h3>
+  <div class="card">
+    <p>A real production RAG system isn't just "Python + Pinecone." It's an orchestrated set of services, each handling a specific concern. Here's the architecture from the arXiv Paper Curator:</p>
+    <div class="pipeline" style="flex-wrap:wrap;justify-content:center;">
+      <div class="pipeline-step"><div class="step-icon">🐳</div><div class="step-label">Docker</div><div class="step-sub">orchestration</div></div>
+      <div class="pipeline-arrow">→</div>
+      <div class="pipeline-step"><div class="step-icon">⚡</div><div class="step-label">FastAPI</div><div class="step-sub">async REST</div></div>
+      <div class="pipeline-arrow">→</div>
+      <div class="pipeline-step"><div class="step-icon">🐘</div><div class="step-label">PostgreSQL</div><div class="step-sub">metadata</div></div>
+      <div class="pipeline-arrow">→</div>
+      <div class="pipeline-step" style="border-color:var(--info)"><div class="step-icon">🔍</div><div class="step-label">OpenSearch</div><div class="step-sub">hybrid search</div></div>
+      <div class="pipeline-arrow">→</div>
+      <div class="pipeline-step"><div class="step-icon">🌊</div><div class="step-label">Airflow</div><div class="step-sub">pipelines</div></div>
+      <div class="pipeline-arrow">→</div>
+      <div class="pipeline-step" style="border-color:var(--accent)"><div class="step-icon">🦙</div><div class="step-label">Ollama</div><div class="step-sub">local LLM</div></div>
+      <div class="pipeline-arrow">→</div>
+      <div class="pipeline-step" style="border-color:var(--danger)"><div class="step-icon">⚡</div><div class="step-label">Redis</div><div class="step-sub">cache</div></div>
+      <div class="pipeline-arrow">→</div>
+      <div class="pipeline-step" style="border-color:var(--purple)"><div class="step-icon">📊</div><div class="step-label">Langfuse</div><div class="step-sub">tracing</div></div>
+    </div>
+    <div style="overflow-x:auto;">
+    <table class="comparison-table">
+      <tr><th>Service</th><th>Role</th><th>Why This Choice</th></tr>
+      <tr><td><strong>FastAPI</strong></td><td>REST API layer</td><td>Async support, auto-docs, streaming SSE for real-time responses</td></tr>
+      <tr><td><strong>PostgreSQL</strong></td><td>Structured metadata</td><td>Paper metadata, user data, relationships — not everything belongs in a vector DB</td></tr>
+      <tr><td><strong>OpenSearch</strong></td><td>Hybrid search engine</td><td>BM25 + vector search in one engine, RRF fusion built-in, dashboards for debugging</td></tr>
+      <tr><td><strong>Airflow</strong></td><td>Data pipeline automation</td><td>Scheduled ingestion (daily arXiv fetch), retry logic, DAG orchestration</td></tr>
+      <tr><td><strong>Ollama</strong></td><td>Local LLM serving</td><td>Complete data privacy, no API costs, works offline</td></tr>
+      <tr><td><strong>Redis</strong></td><td>Response caching</td><td>Exact-match cache: 150-400x speedup on repeated queries</td></tr>
+      <tr><td><strong>Langfuse</strong></td><td>Observability</td><td>End-to-end tracing of every RAG pipeline step: retrieval scores, LLM calls, latency</td></tr>
+    </table>
+    </div>
+    <div class="tip-box">
+      <div class="tip-label">💡 Key Insight</div>
+      <p>Notice what's NOT here: no managed vector DB service. OpenSearch handles both keyword and vector search in one engine. For many production systems, a separate vector DB is unnecessary overhead when your search engine already supports dense vectors natively.</p>
+    </div>
+  </div>
+
+  <h3>Agentic RAG: The 6-Node State Machine</h3>
+  <div class="card" style="border-color:var(--orange);">
+    <p>The arXiv Paper Curator's Week 7 implements agentic RAG not as a vague "agent that retrieves," but as a <strong>concrete LangGraph state machine with 6 specialized nodes</strong> and conditional edges that enable self-correction loops.</p>
+    <pre><code><span class="cm"># LangGraph Agentic RAG — the actual architecture</span>
+<span class="cm"># Key insight: LangGraph supports CYCLES (loops back),</span>
+<span class="cm"># which is impossible in plain LangChain chains.</span>
+
+<span class="cm"># Node 1: GUARDRAIL</span>
+<span class="cm"># → Is this query in-domain? Score relevance to your corpus.</span>
+<span class="cm"># → Out-of-scope queries exit immediately (saves $$)</span>
+
+<span class="cm"># Node 2: RETRIEVE</span>
+<span class="cm"># → Hybrid search (BM25 + vectors via OpenSearch)</span>
+
+<span class="cm"># Node 3: GRADE DOCUMENTS</span>
+<span class="cm"># → LLM evaluates: "Do these docs actually answer the question?"</span>
+<span class="cm"># → Scores each chunk as relevant / not relevant</span>
+
+<span class="cm"># Node 4: REWRITE QUERY (conditional)</span>
+<span class="cm"># → If grading fails, rewrite query and LOOP BACK to retrieve</span>
+<span class="cm"># → This is the self-correction cycle</span>
+
+<span class="cm"># Node 5: GENERATE</span>
+<span class="cm"># → Synthesize answer from graded, relevant documents</span>
+
+<span class="cm"># Node 6: ERROR HANDLING</span>
+<span class="cm"># → Graceful degradation when all retrieval attempts fail</span>
+
+<span class="cm"># The flow:</span>
+Query → <span class="fn">Guardrail</span> ──┬─ in-domain ──→ <span class="fn">Retrieve</span> → <span class="fn">Grade</span>
+                   │                              │
+                   └─ off-topic → Exit         relevant? 
+                                                 │    │
+                                                Yes    No
+                                                 │    │
+                                            <span class="fn">Generate</span>  <span class="fn">Rewrite</span> → <span class="fn">Retrieve</span> (loop)
+                                                       ↑_______________|
+                                                    (max 2 attempts)</code></pre>
+    <div class="tip-box">
+      <div class="tip-label">💡 Why LangGraph, Not LangChain</div>
+      <p>LangChain chains are DAGs — data flows forward only. LangGraph supports <strong>cycles</strong>: a node can route execution back to an earlier node. That loop from "Grade → Rewrite → Retrieve" is impossible in a chain. It's a single conditional edge in a graph. This is what makes the system genuinely self-correcting.</p>
+    </div>
+    <div class="warning-box">
+      <div class="tip-label">⚠ Production Guard Rails</div>
+      <p>Always cap your retry loops. The arXiv curator caps at 2 retrieval attempts. Without this cap, an unanswerable query creates an infinite loop that burns tokens and time. When retries exhaust, the error handling node returns "insufficient information" rather than hallucinating.</p>
+    </div>
+  </div>
+
+  <h3>Section-Based Chunking: Real Parameters That Work</h3>
+  <div class="card">
+    <p>The arXiv Paper Curator uses section-aware chunking with concrete, tested parameters for academic papers:</p>
+    <pre><code><span class="cm"># Production chunking params from the arXiv curator</span>
+<span class="kw">def</span> <span class="fn">section_based_chunking</span>(
+    text,
+    sections_data=<span class="kw">None</span>,
+    target_words=<span class="num">600</span>,      <span class="cm"># ~800 tokens — sweet spot for academic content</span>
+    overlap_words=<span class="num">100</span>      <span class="cm"># ~17% overlap — preserves context at boundaries</span>
+):
+    <span class="cm"># 1. Parse document structure (sections, headings)</span>
+    <span class="cm"># 2. Split at section boundaries first</span>
+    <span class="cm"># 3. If a section > target_words, split within it</span>
+    <span class="cm"># 4. Add overlap from the end of previous chunk</span>
+    <span class="cm"># 5. Prepend section title as contextual header</span>
+    ...</code></pre>
+    <div class="tip-box">
+      <div class="tip-label">💡 Why 600 Words</div>
+      <p>For academic papers, 600 words (~800 tokens) captures a full argument or finding. Smaller (200-300 words) fragments rip conclusions from their evidence. Larger (1000+) chunks dilute precision. The 100-word overlap ensures that a sentence split across boundaries appears in both chunks. These numbers come from iterative testing on real arXiv papers, not theory.</p>
+    </div>
+  </div>
+
+  <h3>Caching: The 150-400x Speedup Nobody Talks About</h3>
+  <div class="card">
+    <p>The arXiv curator implements Redis exact-match caching on RAG responses. The results are staggering:</p>
+    <div class="grid-2">
+      <div>
+        <h4>Without Cache</h4>
+        <p>Query → Embed → Search → Rerank → LLM Generate</p>
+        <p style="font-family:'IBM Plex Mono',monospace;color:var(--danger);font-size:1.1rem;">~3-8 seconds per query</p>
+      </div>
+      <div>
+        <h4>With Redis Cache Hit</h4>
+        <p>Query → Hash → Redis Lookup → Return</p>
+        <p style="font-family:'IBM Plex Mono',monospace;color:var(--accent);font-size:1.1rem;">~20-50 milliseconds</p>
+      </div>
+    </div>
+    <pre><code><span class="cm"># Cache key strategy: hash of (query + search_mode + top_k)</span>
+<span class="cm"># NOT the embedding — the raw query string is the key</span>
+<span class="cm"># TTL: 1 hour for fast-changing corpora, 24h for stable ones</span>
+
+<span class="kw">import</span> hashlib, json, redis
+
+<span class="kw">def</span> <span class="fn">cache_key</span>(query, search_mode, top_k):
+    raw = json.dumps({<span class="str">"q"</span>: query, <span class="str">"m"</span>: search_mode, <span class="str">"k"</span>: top_k})
+    <span class="kw">return</span> <span class="str">f"rag:{hashlib.sha256(raw.encode()).hexdigest()}"</span>
+
+<span class="cm"># On query: check cache first, skip entire pipeline if hit</span>
+<span class="cm"># On miss: run pipeline, store result with TTL</span>
+<span class="cm"># On corpus update: invalidate relevant cache keys</span></code></pre>
+    <div class="tip-box">
+      <div class="tip-label">💡 When to Cache</div>
+      <p>Exact-match caching works when your users ask similar questions repeatedly — which is true for most customer support, FAQ, and internal knowledge base use cases. It's less useful for exploratory research queries where every question is unique. Always implement cache invalidation tied to corpus updates.</p>
+    </div>
+  </div>
+
+  <h3>Langfuse Tracing: See Inside Your Pipeline</h3>
+  <div class="card">
+    <p>Production RAG without observability is like flying blind. Langfuse gives you end-to-end tracing of every pipeline step:</p>
+    <pre><code><span class="cm"># What Langfuse traces for each RAG request:</span>
+Trace: <span class="str">"user-query-abc123"</span>
+├── Span: <span class="str">"query_processing"</span>      <span class="cm"># 12ms</span>
+│   └── query_rewrite: <span class="str">"expanded query..."</span>
+├── Span: <span class="str">"retrieval"</span>              <span class="cm"># 45ms</span>
+│   ├── search_mode: <span class="str">"hybrid"</span>
+│   ├── results_count: <span class="num">15</span>
+│   └── top_score: <span class="num">0.87</span>
+├── Span: <span class="str">"reranking"</span>              <span class="cm"># 180ms</span>
+│   └── reranked_top_score: <span class="num">0.94</span>
+├── Generation: <span class="str">"llm_call"</span>          <span class="cm"># 2.3s</span>
+│   ├── model: <span class="str">"llama3.2:1b"</span>
+│   ├── input_tokens: <span class="num">1847</span>
+│   ├── output_tokens: <span class="num">312</span>
+│   └── cost: <span class="str">$0.00</span> <span class="cm">(local)</span>
+└── Total: <span class="num">2.54s</span></code></pre>
+    <div class="tip-box">
+      <div class="tip-label">💡 What to Monitor</div>
+      <p>Track three things obsessively: (1) Average retrieval score over time — declining scores signal corpus drift. (2) Cache hit rate — below 30% means your cache strategy needs work. (3) Generation latency p95 — if your 95th percentile is 10x your median, you have a tail latency problem.</p>
+    </div>
+  </div>
+
+  <h3>The 7-Week Build Path: What to Implement When</h3>
+  <div class="card" style="border-color:var(--accent);">
+    <p>Based on the arXiv Paper Curator course progression. Each week builds on the last — no skipping.</p>
+    <div style="overflow-x:auto;">
+    <table class="comparison-table">
+      <tr><th>Week</th><th>What You Build</th><th>Key Skill</th></tr>
+      <tr><td><strong>1</strong></td><td>Docker + FastAPI + PostgreSQL + OpenSearch + Airflow</td><td>Service orchestration, health checks, retries</td></tr>
+      <tr><td><strong>2</strong></td><td>Automated data pipeline (arXiv API → PDF parsing → DB)</td><td>Rate limiting, ingestion, Airflow DAGs</td></tr>
+      <tr><td><strong>3</strong></td><td>BM25 keyword search with OpenSearch</td><td>Index mappings, Query DSL, relevance scoring</td></tr>
+      <tr><td><strong>4</strong></td><td>Embeddings + hybrid search (BM25 + vectors + RRF)</td><td>Section-based chunking, Jina embeddings, alpha tuning</td></tr>
+      <tr><td><strong>5</strong></td><td>Complete RAG pipeline with local LLM + streaming</td><td>Prompt engineering, SSE streaming, Gradio UI</td></tr>
+      <tr><td><strong>6</strong></td><td>Production monitoring + Redis caching</td><td>Langfuse tracing, cache strategy, cost analysis</td></tr>
+      <tr><td><strong>7</strong></td><td>Agentic RAG with LangGraph + Telegram bot</td><td>State machines, guardrails, document grading, query rewriting</td></tr>
+    </table>
+    </div>
+    <div class="tip-box">
+      <div class="tip-label">💡 The Key Takeaway</div>
+      <p>Notice that the LLM doesn't appear until Week 5 — halfway through. The first 4 weeks build everything <em>around</em> the LLM: infrastructure, data pipelines, search quality. This is the professional approach: make your retrieval excellent first, then add generation. Most tutorials invert this, leading to systems that hallucinate because the retrieval layer was never properly built.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SECTION 10: DECISION GUIDE + QUIZZES -->
+<!-- ═══════════════════════════════════════════ -->
+<!-- ═══════════════════════════════════════════ -->
+<section id="decision">
+  <h2><span class="section-num">10 — DECISION GUIDE & KNOWLEDGE CHECK</span>Which RAG Is Right For You?</h2>
+  <p class="lead">Answer these questions to find your starting architecture, then test your understanding.</p>
+
+  <h3>Interactive Architecture Finder</h3>
+  <div class="decision-tree" id="decisionTree">
+    <div class="dt-node" id="dt1">
+      <div class="dt-question">How complex are your users' queries?</div>
+      <div class="dt-options">
+        <button class="dt-opt" onclick="dtSelect(this, 'simple')">Simple Q&A</button>
+        <button class="dt-opt" onclick="dtSelect(this, 'moderate')">Moderate — some multi-part</button>
+        <button class="dt-opt" onclick="dtSelect(this, 'complex')">Complex — multi-step research</button>
+      </div>
+    </div>
+    <div class="dt-node" id="dt2" style="display:none;">
+      <div class="dt-question">How critical is accuracy? (Can the system afford to be wrong?)</div>
+      <div class="dt-options">
+        <button class="dt-opt" onclick="dtSelect2(this, 'low')">Low stakes — informational</button>
+        <button class="dt-opt" onclick="dtSelect2(this, 'high')">High stakes — compliance/medical/legal</button>
+      </div>
+    </div>
+    <div class="dt-node" id="dt3" style="display:none;">
+      <div class="dt-question">What's your data like?</div>
+      <div class="dt-options">
+        <button class="dt-opt" onclick="dtSelect3(this, 'text')">Mostly text documents</button>
+        <button class="dt-opt" onclick="dtSelect3(this, 'graph')">Heavily interconnected entities</button>
+        <button class="dt-opt" onclick="dtSelect3(this, 'multi')">Mixed media (images, tables, text)</button>
+      </div>
+    </div>
+    <div class="dt-result" id="dtResult"></div>
+    <button style="margin-top:1rem;background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);padding:0.5rem 1rem;border-radius:6px;cursor:pointer;font-family:inherit;display:none;" id="dtReset" onclick="resetDT()">↻ Start Over</button>
+  </div>
+
+  <h3>Knowledge Check</h3>
+
+  <div class="quiz" id="quiz1">
+    <div class="quiz-q">1. Your RAG system returns the right document but the LLM's answer contradicts it. What's the most likely root cause?</div>
+    <div class="quiz-options">
+      <button class="quiz-opt" onclick="checkQuiz('quiz1', this, false)">The embedding model is too small</button>
+      <button class="quiz-opt" onclick="checkQuiz('quiz1', this, false)">BM25 index is corrupted</button>
+      <button class="quiz-opt" onclick="checkQuiz('quiz1', this, true)">The "lost in the middle" effect — relevant chunk is buried in the context</button>
+      <button class="quiz-opt" onclick="checkQuiz('quiz1', this, false)">The chunk size is too large</button>
+    </div>
+    <div class="quiz-explain" id="quiz1-explain">Correct! The "lost in the middle" problem causes LLMs to pay less attention to content in the middle of the context window. The fix: use a reranker to put the most relevant chunks first, and consider context compression to remove noise.</div>
+  </div>
+
+  <div class="quiz" id="quiz2">
+    <div class="quiz-q">2. Your users query with exact product IDs but vector search returns irrelevant results. What should you add first?</div>
+    <div class="quiz-options">
+      <button class="quiz-opt" onclick="checkQuiz('quiz2', this, false)">A larger embedding model</button>
+      <button class="quiz-opt" onclick="checkQuiz('quiz2', this, true)">BM25/keyword search via hybrid retrieval</button>
+      <button class="quiz-opt" onclick="checkQuiz('quiz2', this, false)">HyDE query expansion</button>
+      <button class="quiz-opt" onclick="checkQuiz('quiz2', this, false)">Smaller chunk sizes</button>
+    </div>
+    <div class="quiz-explain" id="quiz2-explain">Correct! Dense vector search weakens when queries depend on exact terms like product IDs, ticket numbers, or error codes. These terms lose priority in embedding space. BM25 excels at exact-match retrieval, and hybrid search gives you the best of both.</div>
+  </div>
+
+  <div class="quiz" id="quiz3">
+    <div class="quiz-q">3. What is Anthropic's "Contextual Retrieval" technique?</div>
+    <div class="quiz-options">
+      <button class="quiz-opt" onclick="checkQuiz('quiz3', this, false)">A new vector database optimized for RAG</button>
+      <button class="quiz-opt" onclick="checkQuiz('quiz3', this, false)">A reranking algorithm based on Claude</button>
+      <button class="quiz-opt" onclick="checkQuiz('quiz3', this, true)">Prepending LLM-generated context to each chunk before embedding to preserve document-level meaning</button>
+      <button class="quiz-opt" onclick="checkQuiz('quiz3', this, false)">A fine-tuning approach for embedding models</button>
+    </div>
+    <div class="quiz-explain" id="quiz3-explain">Correct! Contextual Retrieval uses an LLM to generate a short contextual explanation for each chunk that situates it within the full document. Combined with contextual BM25 and reranking, it reduces retrieval failures by 67%.</div>
+  </div>
+
+  <div class="quiz" id="quiz4">
+    <div class="quiz-q">4. When does HyDE (Hypothetical Document Embeddings) fail?</div>
+    <div class="quiz-options">
+      <button class="quiz-opt" onclick="checkQuiz('quiz4', this, false)">When the corpus is too small</button>
+      <button class="quiz-opt" onclick="checkQuiz('quiz4', this, true)">When the LLM has zero knowledge about the query topic and generates a wrong hypothetical</button>
+      <button class="quiz-opt" onclick="checkQuiz('quiz4', this, false)">When using BM25 instead of vector search</button>
+      <button class="quiz-opt" onclick="checkQuiz('quiz4', this, false)">When chunk overlap is too high</button>
+    </div>
+    <div class="quiz-explain" id="quiz4-explain">Correct! HyDE relies on the LLM generating a plausible hypothetical answer. If the LLM has no knowledge about the topic, it generates a wrong or irrelevant hypothetical document, which then retrieves wrong results. Always test with out-of-domain queries and add a fallback to standard embedding.</div>
+  </div>
+
+  <div class="quiz" id="quiz5">
+    <div class="quiz-q">5. What's the recommended production progression for improving a RAG system?</div>
+    <div class="quiz-options">
+      <button class="quiz-opt" onclick="checkQuiz('quiz5', this, false)">Agentic RAG → Graph RAG → Naive RAG</button>
+      <button class="quiz-opt" onclick="checkQuiz('quiz5', this, false)">Fine-tune the LLM → Add retrieval → Add reranking</button>
+      <button class="quiz-opt" onclick="checkQuiz('quiz5', this, true)">Naive → Hybrid search → Reranking → Contextual headers → Query transformation → CRAG/Self-RAG</button>
+      <button class="quiz-opt" onclick="checkQuiz('quiz5', this, false)">Build all components simultaneously, then A/B test</button>
+    </div>
+    <div class="quiz-explain" id="quiz5-explain">Correct! Start simple, measure, improve iteratively. Each step should be validated by your eval suite before adding the next layer of complexity. This way you know exactly which improvement moved the needle.</div>
+  </div>
+
+  <div class="quiz" id="quiz6">
+    <div class="quiz-q">6. In an agentic RAG state machine, what happens when the Document Grader scores retrieved chunks as "not relevant"?</div>
+    <div class="quiz-options">
+      <button class="quiz-opt" onclick="checkQuiz('quiz6', this, false)">The system returns "I don't know" immediately</button>
+      <button class="quiz-opt" onclick="checkQuiz('quiz6', this, false)">It retrieves more chunks from the same query</button>
+      <button class="quiz-opt" onclick="checkQuiz('quiz6', this, true)">It rewrites the query and loops back to retrieval (with a retry cap)</button>
+      <button class="quiz-opt" onclick="checkQuiz('quiz6', this, false)">It switches to a larger LLM model</button>
+    </div>
+    <div class="quiz-explain" id="quiz6-explain">Correct! The self-correction cycle is the core of agentic RAG: Grade → Rewrite → Retrieve again. This loop is what makes LangGraph essential — LangChain chains can't loop back. Always cap retries (typically 2 attempts) to prevent infinite loops on unanswerable queries.</div>
+  </div>
+
+  <h3>Production Readiness Checklist</h3>
+  <div class="card" style="border-color: var(--accent);">
+    <p style="color:var(--text)">Track your production readiness. Each item checked is a step closer to a reliable RAG system.</p>
+    <div class="checklist" id="prodChecklist">
+      <div class="checklist-item"><button class="checklist-box" onclick="this.classList.toggle('checked');updateProgress()">✓</button><div class="checklist-text"><strong>Data quality:</strong> Cleaned, deduped, well-structured corpus with rich metadata</div></div>
+      <div class="checklist-item"><button class="checklist-box" onclick="this.classList.toggle('checked');updateProgress()">✓</button><div class="checklist-text"><strong>Chunking strategy:</strong> Tested multiple sizes, settled on optimal for your domain</div></div>
+      <div class="checklist-item"><button class="checklist-box" onclick="this.classList.toggle('checked');updateProgress()">✓</button><div class="checklist-text"><strong>Contextual headers:</strong> Every chunk carries document title, section, date</div></div>
+      <div class="checklist-item"><button class="checklist-box" onclick="this.classList.toggle('checked');updateProgress()">✓</button><div class="checklist-text"><strong>Hybrid search:</strong> Dense + BM25 with RRF fusion</div></div>
+      <div class="checklist-item"><button class="checklist-box" onclick="this.classList.toggle('checked');updateProgress()">✓</button><div class="checklist-text"><strong>Reranking:</strong> Cross-encoder or LLM-based reranker on top-k results</div></div>
+      <div class="checklist-item"><button class="checklist-box" onclick="this.classList.toggle('checked');updateProgress()">✓</button><div class="checklist-text"><strong>Query transformation:</strong> At least basic rewriting for ambiguous queries</div></div>
+      <div class="checklist-item"><button class="checklist-box" onclick="this.classList.toggle('checked');updateProgress()">✓</button><div class="checklist-text"><strong>Grounding prompt:</strong> "Answer from context only" with "I don't know" escape</div></div>
+      <div class="checklist-item"><button class="checklist-box" onclick="this.classList.toggle('checked');updateProgress()">✓</button><div class="checklist-text"><strong>Citation:</strong> Inline source attribution in generated answers</div></div>
+      <div class="checklist-item"><button class="checklist-box" onclick="this.classList.toggle('checked');updateProgress()">✓</button><div class="checklist-text"><strong>Eval suite:</strong> 50+ real queries with automated scoring (RAGAS or custom)</div></div>
+      <div class="checklist-item"><button class="checklist-box" onclick="this.classList.toggle('checked');updateProgress()">✓</button><div class="checklist-text"><strong>CI/CD gate:</strong> Eval suite runs before every deploy, blocks on regression</div></div>
+      <div class="checklist-item"><button class="checklist-box" onclick="this.classList.toggle('checked');updateProgress()">✓</button><div class="checklist-text"><strong>Observability:</strong> Full logging of queries, retrievals, scores, and outputs</div></div>
+      <div class="checklist-item"><button class="checklist-box" onclick="this.classList.toggle('checked');updateProgress()">✓</button><div class="checklist-text"><strong>User feedback:</strong> Thumbs up/down collection tied to full request traces</div></div>
+    </div>
+    <div style="margin-top:1rem;padding:0.75rem 1rem;background:var(--surface2);border-radius:8px;text-align:center;">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:0.85rem;color:var(--text-dim);">Readiness: </span>
+      <span id="readinessScore" style="font-family:'IBM Plex Mono',monospace;font-size:1.2rem;font-weight:600;color:var(--accent);">0%</span>
+    </div>
+  </div>
+</section>
+
+</div><!-- container -->
+
+<footer>
+  <p>Built as an interactive learning reference. Content synthesized from Anthropic, Google Cloud, Neo4j, Pinecone, LangChain, RAGAS, and community research (2025–2026).<br>Production architecture patterns from <a href="https://github.com/jamwithai/production-agentic-rag-course">jamwithai/production-agentic-rag-course</a> (MIT License).</p>
+  <p style="margin-top:0.5rem;">Not affiliated with any vendor. Use what works for your use case.</p>
+</footer>
+
+<script>
+// ── TABS ──
+document.querySelectorAll('.tabs').forEach(tabGroup => {
+  tabGroup.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const parent = tab.closest('section') || tab.closest('.container') || document.body;
+      const tabId = tab.dataset.tab;
+      tabGroup.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      parent.querySelectorAll('.tab-content').forEach(c => {
+        if (c.dataset.tab === tabId) c.classList.add('active');
+        else c.classList.remove('active');
+      });
+    });
+  });
+});
+
+// ── ACCORDION ──
+document.querySelectorAll('.accordion-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const item = btn.parentElement;
+    const body = item.querySelector('.accordion-body');
+    const isOpen = item.classList.contains('open');
+    // Close all in same accordion
+    item.parentElement.querySelectorAll('.accordion-item').forEach(i => {
+      i.classList.remove('open');
+      i.querySelector('.accordion-body').style.maxHeight = null;
+    });
+    if (!isOpen) {
+      item.classList.add('open');
+      body.style.maxHeight = body.scrollHeight + 'px';
+    }
+  });
+});
+
+// ── NAV ──
+document.querySelectorAll('.nav-link').forEach(link => {
+  link.addEventListener('click', (e) => {
+    e.preventDefault();
+    const target = document.getElementById(link.dataset.target);
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+});
+
+// ── SCROLL EFFECTS ──
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) e.target.classList.add('visible');
+  });
+}, { threshold: 0.08 });
+document.querySelectorAll('section:not(.hero)').forEach(s => observer.observe(s));
+
+// Progress bar
+window.addEventListener('scroll', () => {
+  const scrollTop = window.scrollY;
+  const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+  const progress = (scrollTop / docHeight) * 100;
+  document.getElementById('progressBar').style.width = progress + '%';
+
+  // Active nav
+  const sections = document.querySelectorAll('section[id]');
+  let current = '';
+  sections.forEach(s => {
+    if (scrollTop >= s.offsetTop - 100) current = s.id;
+  });
+  document.querySelectorAll('.nav-link').forEach(l => {
+    l.classList.toggle('active', l.dataset.target === current);
+  });
+});
+
+// ── QUIZ ──
+function checkQuiz(quizId, btn, correct) {
+  const quiz = document.getElementById(quizId);
+  if (quiz.dataset.answered) return;
+  quiz.dataset.answered = 'true';
+  quiz.querySelectorAll('.quiz-opt').forEach(o => o.style.pointerEvents = 'none');
+  btn.classList.add(correct ? 'correct' : 'wrong');
+  if (!correct) {
+    quiz.querySelectorAll('.quiz-opt').forEach(o => {
+      if (o !== btn) o.addEventListener('click', () => {}, false);
+    });
+    // highlight correct
+    const opts = quiz.querySelectorAll('.quiz-opt');
+    opts.forEach((o,i) => {
+      // find the correct one by re-checking onclick attribute
+    });
+  }
+  const explain = document.getElementById(quizId + '-explain');
+  if (correct && explain) explain.classList.add('show');
+  if (!correct && explain) {
+    explain.textContent = 'Not quite. ' + explain.textContent;
+    explain.classList.add('show');
+  }
+}
+
+// ── DECISION TREE ──
+let dtState = {};
+function dtSelect(btn, val) {
+  dtState.complexity = val;
+  btn.parentElement.querySelectorAll('.dt-opt').forEach(o => o.classList.remove('selected'));
+  btn.classList.add('selected');
+  document.getElementById('dt2').style.display = 'block';
+  document.getElementById('dt2').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+function dtSelect2(btn, val) {
+  dtState.accuracy = val;
+  btn.parentElement.querySelectorAll('.dt-opt').forEach(o => o.classList.remove('selected'));
+  btn.classList.add('selected');
+  document.getElementById('dt3').style.display = 'block';
+  document.getElementById('dt3').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+function dtSelect3(btn, val) {
+  dtState.data = val;
+  btn.parentElement.querySelectorAll('.dt-opt').forEach(o => o.classList.remove('selected'));
+  btn.classList.add('selected');
+  showDTResult();
+}
+function showDTResult() {
+  const r = document.getElementById('dtResult');
+  const reset = document.getElementById('dtReset');
+  let rec = '';
+  const {complexity, accuracy, data} = dtState;
+
+  if (complexity === 'simple' && accuracy === 'low') {
+    rec = `<h4>→ Advanced RAG (Hybrid + Reranking)</h4><p>Your use case is straightforward enough that a well-tuned Advanced RAG pipeline will serve you well. Implement hybrid search (BM25 + vectors) with a cross-encoder reranker. Add contextual headers to your chunks. This covers 80% of production Q&A needs.</p>`;
+  } else if (complexity === 'simple' && accuracy === 'high') {
+    rec = `<h4>→ Corrective RAG (CRAG)</h4><p>For simple but high-stakes queries, add a validation layer. CRAG scores retrieved documents and triggers fallback search when retrieval quality is poor. Use a fine-tuned T5 as the grader for speed. Consider adding citation verification in the generation step.</p>`;
+  } else if (complexity === 'moderate' && data === 'graph') {
+    rec = `<h4>→ Graph RAG + Hybrid Search</h4><p>Your interconnected data is perfect for Graph RAG. Build a knowledge graph of entities and relationships, then combine graph traversal with vector search. Neo4j + a vector DB like Pinecone gives you both relationship-aware and semantic retrieval.</p>`;
+  } else if (complexity === 'moderate' && data === 'multi') {
+    rec = `<h4>→ Multimodal RAG + Reranking</h4><p>Use modality-specific embedders (CLIP for images, text embedders for docs) and merge results at the ranking stage. Add a cross-encoder reranker to sort across modalities. Consider building separate indices per modality for cleaner results.</p>`;
+  } else if (complexity === 'complex') {
+    rec = `<h4>→ Agentic RAG</h4><p>Complex multi-step research needs an agent that can plan, retrieve, evaluate, and iterate. Start with a single-agent architecture using LangGraph or similar. Add Self-RAG reflection to catch hallucinations. Only decompose into multi-agent if you have genuinely distinct retrieval domains.</p>`;
+  } else if (accuracy === 'high' && data === 'graph') {
+    rec = `<h4>→ Graph RAG + Self-RAG</h4><p>Combine knowledge graph traversal for relationship-aware retrieval with Self-RAG's self-critique for hallucination prevention. This is a premium architecture — high quality but higher latency and cost.</p>`;
+  } else {
+    rec = `<h4>→ Advanced RAG + ${data === 'multi' ? 'Multimodal' : 'CRAG'}</h4><p>Start with a solid Advanced RAG foundation (hybrid search + reranking + contextual headers), then layer ${data === 'multi' ? 'multimodal embedding pipelines' : 'corrective validation'} on top. Measure at each step to ensure each addition moves the needle.</p>`;
+  }
+
+  r.innerHTML = rec;
+  r.classList.add('show');
+  reset.style.display = 'inline-block';
+  r.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+function resetDT() {
+  dtState = {};
+  document.getElementById('dt2').style.display = 'none';
+  document.getElementById('dt3').style.display = 'none';
+  document.getElementById('dtResult').classList.remove('show');
+  document.getElementById('dtReset').style.display = 'none';
+  document.querySelectorAll('.dt-opt').forEach(o => o.classList.remove('selected'));
+}
+
+// ── PRODUCTION READINESS ──
+function updateProgress() {
+  const checks = document.querySelectorAll('#prodChecklist .checklist-box');
+  const checked = document.querySelectorAll('#prodChecklist .checklist-box.checked');
+  const pct = Math.round((checked.length / checks.length) * 100);
+  document.getElementById('readinessScore').textContent = pct + '%';
+  document.getElementById('readinessScore').style.color =
+    pct >= 80 ? 'var(--accent)' : pct >= 50 ? 'var(--warning)' : 'var(--danger)';
+}
+</script>
+</body>
+</html>
